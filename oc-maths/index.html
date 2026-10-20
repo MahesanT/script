@@ -154,6 +154,12 @@ input:focus,select:focus{border-color:var(--accent);outline:none}
 .m-red{fill:var(--m-red)} .m-blue{fill:var(--m-blue)} .m-green{fill:var(--m-green)} .m-yellow{fill:var(--m-yellow)}
 .m-red,.m-blue,.m-green,.m-yellow{stroke:var(--ink);stroke-opacity:.35;stroke-width:1.5}
 .sv-stick{stroke:var(--stick);stroke-width:5;stroke-linecap:round} .sv-head{fill:var(--bad)}
+.modes.two{grid-template-columns:1fr}
+.tiles{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.qtile{display:grid;place-items:center;width:64px;height:64px;border:2.5px dashed var(--accent);border-radius:6px;font:600 1.6rem var(--f-display);color:var(--accent)}
+.tile{display:block;max-width:100%;height:auto}
+.sv-arrowhead{fill:var(--accent)} .sv-dot{fill:var(--bad)} .sv-cell{fill:var(--card);stroke:var(--line);stroke-width:1.5} .sv-net{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.working .tile{margin:4px 0} .answer-line span:has(.tile){display:inline-block;vertical-align:middle;padding:4px 8px} .answer-line .tile{display:block;margin:0}
 @media (max-width:720px){.modes{grid-template-columns:1fr}.topics{grid-template-columns:1fr}}
 @media (max-width:480px){.choices{grid-template-columns:1fr}.qcard,.panel{padding:16px}.helpers .primary{margin-left:0;width:100%}.qtext{font-size:1.1rem}.tally span+span{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -163,4 +169,5 @@ input:focus,select:focus{border-color:var(--accent);outline:none}
 <script src="gen-number.js"></script>
 <script src="gen-measure.js"></script>
 <script src="gen-reason.js"></script>
+<script src="gen-thinking.js"></script>
 <script src="app.js"></script>
