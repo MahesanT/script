@@ -91,7 +91,7 @@ function gConvert(L){
     const tot=n*f+f/2;
     return{text:`<span class="big">${n}.5 ${big} = ${BOX} ${small}</span>`,...mc(tot,[n*f+5,n*f+50,n*f+f/10,tot*10]),hint:`0.5 means one half.`,
       steps:[`${n} ${big} = ${fmt(n*f)} ${small}`,`0.5 ${big} is half of ${fmt(f)}, which is ${fmt(f/2)} ${small}`,`${fmt(n*f)} + ${fmt(f/2)} = <b>${fmt(tot)} ${small}</b>`]};}
-  const set=new Set();while(set.size<4)set.add(R(16,44)*5);const vals=[...set],fm=shuffle(['m','cm','mm','m']);
+  const set=new Set();while(set.size<5)set.add(R(16,44)*5);const vals=[...set],fm=shuffle(['m','cm','mm','m','cm']);
   const show=vals.map((v,i)=>fm[i]==='m'?`${v/100} m`:fm[i]==='cm'?`${v} cm`:`${v*10} mm`),big=Math.random()<.5,tg=big?Math.max(...vals):Math.min(...vals),ans=show[vals.indexOf(tg)];
   return{text:`Which length is the <b>${big?'longest':'shortest'}</b>?`,...mc(ans,show.filter(s=>s!==ans)),hint:`Change them all into centimetres. 1 m = 100 cm and 10 mm = 1 cm.`,
     steps:[`Change each one into cm:`,show.map((s,i)=>`${s} = ${vals[i]} cm`).join('<br>'),`The ${big?'longest':'shortest'} is ${tg} cm, which is <b>${ans}</b>`]};
@@ -137,9 +137,9 @@ function gElapsed(L){
 function gTime24(L){
   const edge=L===3&&Math.random()<.5,t=edge?pick([0,12])*60+R(1,11)*5:R(1,23)*60+R(0,11)*5,h=Math.floor(t/60),m=t%60,s24=`${pad(h)}:${pad(m)}`;
   const rule=h===0?`Just after midnight the 24-hour clock starts at 00, so ${fmtTime(t)} is 00:${pad(m)}.`:h===12?`12 noon is 12 in both clocks.`:h>12?`For pm times after 1 pm, add 12 to the hour: ${h-12} + 12 = ${h}.`:`Morning (am) times keep the same hour.`;
-  if(Math.random()<.5)return{text:`What is <b>${fmtTime(t)}</b> in 24-hour time?`,...mc(s24,[`${pad((h+12)%24)}:${pad(m)}`,`${pad(h%12)}:${pad(m)}`,`${pad((h+10)%24)}:${pad(m)}`,`${pad(h)}:${pad((m+10)%60)}`]),
+  if(Math.random()<.5)return{text:`What is <b>${fmtTime(t)}</b> in 24-hour time?`,...mc(s24,[`${pad((h+12)%24)}:${pad(m)}`,`${pad(h%12)}:${pad(m)}`,`${pad((h+10)%24)}:${pad(m)}`,`${pad(h)}:${pad((m+10)%60)}`,`${pad((h+11)%24)}:${pad(m)}`]),
     hint:`pm hours after 1 pm need 12 added.`,steps:[rule,`Answer: <b>${s24}</b>`]};
-  return{text:`What is <b>${s24}</b> in 12-hour time?`,...mc(fmtTime(t),[fmtTime(t+720),fmtTime(t-600),fmtTime(t+60),fmtTime(t-120)]),hint:`If the hour is more than 12, take away 12 and it's pm.`,
+  return{text:`What is <b>${s24}</b> in 12-hour time?`,...mc(fmtTime(t),[fmtTime(t+720),fmtTime(t-600),fmtTime(t+60),fmtTime(t-120),fmtTime(t+780)]),hint:`If the hour is more than 12, take away 12 and it's pm.`,
     steps:[rule,`Answer: <b>${fmtTime(t)}</b>`]};
 }
 function gChange(L){
@@ -160,7 +160,7 @@ function gCalendar(L){
       hint:`Every 7 days it comes back to the same day.`,steps:[...(n>=7?[`In 7 days it is ${DAYS[i]} again.`,`${n} − 7 = ${n-7} more day${n-7===1?'':'s'}.`]:[`Count on ${n} days from ${DAYS[i]}.`]),`Answer: <b>${ans}</b>`]};}
   const mi=R(0,11),[mn,ml]=MONTHS[mi];
   if(L===2){const a=R(1,10),b=a+R(8,Math.min(20,ml-a)),i=R(0,6),diff=b-a,ans=DAYS[(i+diff)%7],same=[];for(let x=a;x<=b;x+=7)same.push(x);
-    return{text:`If <b>${a} ${mn}</b> is a <b>${DAYS[i]}</b>, what day of the week is <b>${b} ${mn}</b>?`,...mc(ans,[DAYS[(i+diff+1)%7],DAYS[(i+diff+6)%7],DAYS[(i+diff+2)%7]]),
+    return{text:`If <b>${a} ${mn}</b> is a <b>${DAYS[i]}</b>, what day of the week is <b>${b} ${mn}</b>?`,...mc(ans,[DAYS[(i+diff+1)%7],DAYS[(i+diff+6)%7],DAYS[(i+diff+2)%7],DAYS[(i+diff+5)%7]]),
       hint:`Add 7 days at a time. Each jump lands on ${DAYS[i]} again.`,
       steps:[`Jump by 7s: ${same.map(x=>`${x} ${mn}`).join(', ')} are all ${DAYS[i]}s.`,`${b} is ${b-same[same.length-1]} day${b-same[same.length-1]===1?'':'s'} after ${same[same.length-1]}.`,`Answer: <b>${ans}</b>`]};}
   const[nn]=MONTHS[(mi+1)%12],a=R(ml-6,ml-1),b=R(3,15),days=(ml-a)+b;

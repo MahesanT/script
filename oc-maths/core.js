@@ -22,15 +22,17 @@ function durStr(d){const h=Math.floor(d/60),m=d%60;return[h?`${h} h`:'',m?`${m} 
 function placeTable(num){const ds=String(num).split('');const n=ds.length;
   return`<table class="pt"><tr>${ds.map((_,i)=>`<th>${PL_ABBR[n-1-i]}</th>`).join('')}</tr><tr>${ds.map(d=>`<td>${d}</td>`).join('')}</tr></table>`;}
 
-// Build 4 unique options. Numbers: no negatives, no fractions when the answer is whole.
+// Number of options per question: 5 (A–E) on the OC maths paper, 4 on Thinking Skills. makeQ sets it.
+let MC_N=5;
+// Build MC_N unique options. Numbers: no negatives, no fractions when the answer is whole.
 function mc(ans,wrong,f){
   f=f||(v=>typeof v==='number'?fmt(v):String(v));
   const isNum=typeof ans==='number',isInt=isNum&&Number.isInteger(ans);
   const seen=new Set([String(ans)]),out=[];
   const ok=w=>{if(w==null)return false;if(typeof w==='number'){if(!isFinite(w)||w<0)return false;if(isInt&&!Number.isInteger(w))return false;}return!seen.has(String(w));};
-  for(const w of wrong){if(out.length>=3)break;if(ok(w)){seen.add(String(w));out.push(w);}}
+  for(const w of wrong){if(out.length>=MC_N-1)break;if(ok(w)){seen.add(String(w));out.push(w);}}
   let g=0;
-  while(isNum&&out.length<3&&g++<300){
+  while(isNum&&out.length<MC_N-1&&g++<300){
     const step=isInt?Math.max(1,Math.round(Math.abs(ans)/10)):0.1;
     let w=ans+(Math.random()<.5?-1:1)*R(1,4)*step;if(!isInt)w=+w.toFixed(2);
     if(ok(w)){seen.add(String(w));out.push(w);}

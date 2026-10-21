@@ -26,7 +26,7 @@ function gExpanded(L){
 }
 function gOrdering(L){
   const n=L+2,ds=shuffle([0,1,2,3,4,5,6,7,8,9]).slice(0,n),set=new Set();let g=0;
-  while(set.size<4&&g++<300){const p=shuffle(ds);if(p[0]!==0)set.add(+p.join(''));}
+  while(set.size<5&&g++<300){const p=shuffle(ds);if(p[0]!==0)set.add(+p.join(''));}
   const nums=[...set],big=Math.random()<.5,ans=big?Math.max(...nums):Math.min(...nums),sorted=nums.slice().sort((a,b)=>big?b-a:a-b);
   return{text:`Which number is the <b>${big?'largest':'smallest'}</b>?`,...mc(ans,nums.filter(x=>x!==ans)),
     hint:`Compare the digits in the biggest place first. If they match, move one place to the right.`,
@@ -169,7 +169,7 @@ function gEquivFrac(L){
     return{text:`<span class="big">${F(a,b)} = ${F(a*k,BOX)}</span>`,...mc(b*k,[b+(a*k-a),b*k+1,b*k-1,b*(k+1)]),
       hint:`What was ${a} multiplied by to get ${a*k}? Do the same to the bottom.`,steps:[`${a} × ${k} = ${a*k}, so the top was multiplied by ${k}.`,`Multiply the bottom by ${k} too: ${b} × ${k} = ${b*k}`,`So ${F(a,b)} = ${F(a*k,b*k)}`]};}
   let a,b;do{b=R(3,9);a=R(1,b-1);}while(gcd(a,b)!==1);const k=R(2,4),N=a*k,D=b*k;
-  const c=[[a+1,b],[a,b+1],[N-1,D],[N,D+1],[a+1,b+1],[a-1,b],[b-a,b]].filter(([x,y])=>x>0&&x<y&&x*b!==a*y).map(([x,y])=>`${x}/${y}`);
+  const c=[[a+1,b],[a,b+1],[N-1,D],[N,D+1],[a+1,b+1],[a-1,b],[b-a,b],[a,b+2],[N+1,D]].filter(([x,y])=>x>0&&x<y&&x*b!==a*y).map(([x,y])=>`${x}/${y}`);
   return{text:`Which fraction is equal to ${F(N,D)}?`,...mc(`${a}/${b}`,c,fracFmt),hint:`Divide the top and the bottom by the same number. Try ${k}.`,
     steps:[`${N} and ${D} can both be divided by ${k}.`,`${N} ÷ ${k} = ${a} and ${D} ÷ ${k} = ${b}`,`So ${F(N,D)} = ${F(a,b)}`]};
 }
@@ -178,7 +178,7 @@ function gFracShaded(L){
     return{text:`What fraction of the strip is ${un?'<b>not</b> shaded':'shaded'}?`,visual:gridSVG(1,d,sh),...mc(ans,[`${d-cnt}/${d}`,`${cnt}/${d-cnt}`,`${d-cnt}/${cnt}`,`${cnt}/${d+1}`,`1/${d}`],fracFmt),
       hint:`Count all the equal parts. That is the bottom number of the fraction.`,steps:[`The strip has <b>${d}</b> equal parts.`,`<b>${cnt}</b> parts are ${un?'not shaded':'shaded'}.`,`So the fraction is ${F(cnt,d)}`]};}
   const q=pick([2,3,4,5]),p=R(1,q-1),k=pick([2,3]),d=q*k,s=p*k,sh=new Set(shuffle(Array.from({length:d},(_,i)=>i)).slice(0,s));
-  const c=[[q-p,q],[p,q+1],[p+1,q],[s,d-s],[p,d]].filter(([x,y])=>x>0&&x*q!==p*y).map(([x,y])=>`${x}/${y}`);
+  const c=[[q-p,q],[p,q+1],[p+1,q],[s,d-s],[p,d],[p,q+2],[q-p,q+1]].filter(([x,y])=>x>0&&x*q!==p*y).map(([x,y])=>`${x}/${y}`);
   return{text:`What fraction of the rectangle is shaded? Give it in <b>simplest form</b>.`,visual:gridSVG(k,q,sh),...mc(`${p}/${q}`,c,fracFmt),
     hint:`Write the fraction first, then divide the top and bottom by the same number.`,
     steps:[`There are ${d} squares and ${s} are shaded: ${F(s,d)}`,`Divide top and bottom by ${k}: ${s} ÷ ${k} = ${p}, ${d} ÷ ${k} = ${q}`,`Simplest form: ${F(p,q)}`]};
@@ -193,22 +193,22 @@ function gDecimals(L){
     return{text:`<span class="big">${a} + ${b} = ${BOX}</span>`,...mc(ans,[((A+B)/100).toFixed(2),((s+10)/100).toFixed(2),((s-10)/100).toFixed(2),(s/10).toFixed(1)]),
       hint:`Line up the decimal points. You can write ${a} as ${a}0.`,
       steps:[`Line up the decimal points. ${a} is the same as ${a}0.`,vsum(a+'0','+',b),`Add as usual and keep the point in line: <b>${ans}</b>`]};}
-  const a=R(3,8),b=R(1,9),c=R(1,9),nums=[`0.${a}`,`0.${a-1}${b}${c}`,`0.0${a}${b}`,`0.${a-1}${b}`],big=Math.random()<.5,ans=big?nums[0]:nums[2];
+  const a=R(3,8),b=R(1,9),c=R(1,9),nums=[`0.${a}`,`0.${a-1}${b}${c}`,`0.0${a}${b}`,`0.${a-1}${b}`,`0.${a-1}0${b}`],big=Math.random()<.5,ans=big?nums[0]:nums[2];
   const p3=x=>x.padEnd(5,'0'),sorted=nums.slice().sort((x,y)=>big?(+y)-(+x):(+x)-(+y));
   return{text:`Which decimal is the <b>${big?'largest':'smallest'}</b>?`,...mc(ans,nums.filter(x=>x!==ans)),hint:`Give every number the same number of decimal places, then compare.`,
     steps:[`Write each with 3 decimal places: ${nums.map(p3).join(', ')}`,`Now compare them like whole numbers: ${sorted.map(p3).join(' > ').replace(/>/g,big?'>':'<')}`,`Answer: <b>${ans}</b>`]};
 }
 function gCompareFrac(L){
-  if(L===1){const d=R(5,12),ns=shuffle(Array.from({length:d-1},(_,i)=>i+1)).slice(0,4),big=Math.random()<.6,ans=big?Math.max(...ns):Math.min(...ns);
+  if(L===1){const d=R(6,12),ns=shuffle(Array.from({length:d-1},(_,i)=>i+1)).slice(0,5),big=Math.random()<.6,ans=big?Math.max(...ns):Math.min(...ns);
     return{text:`Which fraction is the <b>${big?'largest':'smallest'}</b>?`,...mc(`${ans}/${d}`,ns.filter(n=>n!==ans).map(n=>`${n}/${d}`),fracFmt),
       hint:`The bottom numbers are the same, so the parts are the same size. Compare the top numbers.`,
       steps:[`All the fractions are ${d}ths, so every part is the same size.`,`The ${big?'most':'fewest'} parts is ${ans}.`,`Answer: ${F(ans,d)}`]};}
-  if(L===2){const ds=shuffle([2,3,4,5,6,8,10,12]).slice(0,4),big=Math.random()<.6,ans=big?Math.min(...ds):Math.max(...ds);
+  if(L===2){const ds=shuffle([2,3,4,5,6,8,10,12]).slice(0,5),big=Math.random()<.6,ans=big?Math.min(...ds):Math.max(...ds);
     return{text:`Which fraction is the <b>${big?'largest':'smallest'}</b>?`,...mc(`1/${ans}`,ds.filter(x=>x!==ans).map(x=>`1/${x}`),fracFmt),
       hint:`Would you rather have one slice of a pizza cut into 2, or one slice of a pizza cut into 8?`,
       steps:[`Each fraction is one piece of a whole.`,`The more pieces a whole is cut into, the <b>smaller</b> each piece is.`,`So the ${big?'largest':'smallest'} is ${F(1,ans)}`]};}
   const pool=[];for(const d of[2,3,4,6,8,12])for(let n=1;n<d;n++)if(gcd(n,d)===1)pool.push([n,d]);
-  const pk=shuffle(pool).slice(0,4),vals=pk.map(([n,d])=>n*24/d),big=Math.random()<.5,tg=big?Math.max(...vals):Math.min(...vals),[an,ad]=pk[vals.indexOf(tg)];
+  const pk=shuffle(pool).slice(0,5),vals=pk.map(([n,d])=>n*24/d),big=Math.random()<.5,tg=big?Math.max(...vals):Math.min(...vals),[an,ad]=pk[vals.indexOf(tg)];
   return{text:`Which fraction is the <b>${big?'largest':'smallest'}</b>?`,...mc(`${an}/${ad}`,pk.filter(([n,d])=>!(n===an&&d===ad)).map(([n,d])=>`${n}/${d}`),fracFmt),
     hint:`Change them all into 24ths so you can compare.`,
     steps:[`Change each fraction into 24ths:`,pk.map(([n,d])=>`${F(n,d)} = ${F(n*24/d,24)}`).join('&ensp;'),`The ${big?'largest':'smallest'} is ${F(tg,24)}, which is ${F(an,ad)}`]};

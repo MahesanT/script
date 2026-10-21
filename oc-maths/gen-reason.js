@@ -35,7 +35,7 @@ function gTurns(L){
   const tn=(k,cw)=>eight?`${k*45}° ${cw?'clockwise':'anticlockwise'}`:`a ${({2:'quarter',4:'half',6:'three-quarter'})[k]} turn ${cw?'clockwise':'anticlockwise'}`;
   for(const[k,cw]of ts){const nd=(d+(cw?k:-k)+8)%8;steps.push(`Facing ${DIR8[d]}, turn ${tn(k,cw)}${eight?'':` (${k*45}°)`} → now facing <b>${DIR8[nd]}</b>.`);d=nd;}
   let opp=start;for(const[k,cw]of ts)opp=(opp+(cw?-k:k)+8)%8;
-  const pool=eight?DIR8:DIR8.filter((_,i)=>i%2===0);
+  const pool=shuffle(eight?DIR8:[...DIR8.filter((_,i)=>i%2===0),DIR8[(d+1)%8]]);
   return{text:`Sam is facing <b>${DIR8[start]}</b>. ${cap(ts.map(([k,cw])=>`he turns ${tn(k,cw)}`).join(', then '))}. Which way is he facing now?`,visual:compassSVG(eight),
     ...mc(DIR8[d],[DIR8[opp],...shuffle(pool)]),hint:`Clockwise goes the way clock hands move: North → East → South → West. A quarter turn is 90°.`,steps};
 }
@@ -47,7 +47,7 @@ function gAngleType(L){
     const[nm,a]=pick([['a quarter turn',90],['a half turn',180],['a three-quarter turn',270],['a full turn',360]]);
     return{text:`How many degrees are there in <b>${nm}</b>?`,...mc(a,[90,180,270,360,a/2].filter(x=>x!==a)),hint:`A full turn is 360°.`,steps:[`A full turn is 360°.`,`${cap(nm)} is <b>${a}°</b>.`]};}
   const ti=L===1?R(0,2):R(0,4),deg=[R(25,75),90,R(105,165),180,R(200,330)][ti];
-  return{text:`What type of angle is this?`,visual:angleSVG(deg),...mc(types[ti][0],shuffle(types.slice(0,L===1?4:5).map(t=>t[0]))),hint:`Compare it with a right angle, like the corner of a book.`,
+  return{text:`What type of angle is this?`,visual:angleSVG(deg),...mc(types[ti][0],shuffle(types.map(t=>t[0]))),hint:`Compare it with a right angle, like the corner of a book.`,
     steps:[`This angle is about ${Math.round(deg/5)*5}°.`,`It is ${types[ti][1]}.`,`So it is <b>${types[ti][0]}</b>.`]};
 }
 function gBarGraph(L){
@@ -65,15 +65,15 @@ function gBarGraph(L){
     steps:[`Read each column: ${cs.map((c,i)=>`${c} ${vals[i]}`).join(', ')}`,`Add them: ${vals.join(' + ')} = <b>${sum}</b>`]};
 }
 function gChance(L){
-  const COLS=['red','blue','green','yellow'];
-  if(L===1){const cols=shuffle(COLS).slice(0,3);let ns;do{ns=cols.map(()=>R(1,7));}while(new Set(ns).size<3);
-    if(Math.random()<.25){const miss=COLS.find(c=>!cols.includes(c));
-      return{text:`Without looking, Kiara picks one marble from the bag. What is the chance it is <b>${miss}</b>?`,visual:marblesSVG(cols.map((c,i)=>({col:c,n:ns[i]}))),...mc('impossible',['certain','likely','unlikely']),
+  const COLS=['red','blue','green','yellow','purple'];
+  if(L===1){const cols=shuffle(COLS.slice(0,4)).slice(0,3);let ns;do{ns=cols.map(()=>R(1,7));}while(new Set(ns).size<3);
+    if(Math.random()<.25){const miss=COLS.slice(0,4).find(c=>!cols.includes(c));
+      return{text:`Without looking, Kiara picks one marble from the bag. What is the chance it is <b>${miss}</b>?`,visual:marblesSVG(cols.map((c,i)=>({col:c,n:ns[i]}))),...mc('impossible',['certain','likely','unlikely','even chance']),
         hint:`Are there any ${miss} marbles in the bag?`,steps:[`There are no ${miss} marbles in the bag.`,`Something that cannot happen is <b>impossible</b>.`]};}
     const most=Math.random()<.6,tg=most?Math.max(...ns):Math.min(...ns),ans=cols[ns.indexOf(tg)];
     return{text:`Without looking, Kiara picks one marble. Which colour is she <b>${most?'most':'least'}</b> likely to pick?`,visual:marblesSVG(cols.map((c,i)=>({col:c,n:ns[i]}))),
       ...mc(ans,COLS.filter(c=>c!==ans)),hint:`Count how many marbles there are of each colour.`,steps:[`Count: ${cols.map((c,i)=>`${ns[i]} ${c}`).join(', ')}.`,`The colour with the ${most?'most':'fewest'} marbles is the ${most?'most':'least'} likely: <b>${ans}</b>.`]};}
-  if(L===2){const cols=shuffle(COLS).slice(0,3),ns=cols.map(()=>R(1,6)),T=ns.reduce((a,b)=>a+b,0),i=R(0,2),c=ns[i];
+  if(L===2){const cols=shuffle(COLS.slice(0,4)).slice(0,3),ns=cols.map(()=>R(1,6)),T=ns.reduce((a,b)=>a+b,0),i=R(0,2),c=ns[i];
     return{text:`What is the chance of picking a <b>${cols[i]}</b> marble?`,visual:marblesSVG(cols.map((c,i)=>({col:c,n:ns[i]}))),...mc(`${c}/${T}`,[`${c}/${T-c}`,`${T-c}/${T}`,`1/${T}`,`${c}/${T+1}`,`1/${c}`],fracFmt),
       hint:`Chance = number of ${cols[i]} marbles out of all the marbles.`,steps:[`There are ${cols.map((c,i)=>ns[i]).join(' + ')} = ${T} marbles.`,`${c} of them are ${cols[i]}.`,`The chance is ${F(c,T)}`]};}
   const r=R(2,6),b=R(r,r+6),g=R(1,6),x=b+g-r;
@@ -133,7 +133,7 @@ function gAges(L){
     steps:[`The age gap is always ${m} − ${c} = ${m-c} years.`,`When mum is ${kw} ${A}'s age, the gap is ${k-1} × ${A}'s age.`,`${A}'s age then: ${m-c} ÷ ${k-1} = ${C}`,`${C} − ${c} = <b>${x}</b> years. Check: ${A} ${C}, mum ${m+x} = ${k} × ${C} ✓`]};
 }
 function gBestBuy(L){
-  const item=pick(['muesli bars','pens','apples','juice boxes','cupcakes']),us=shuffle([40,45,50,55,60,65,70,75,80,85,90,95]).slice(0,4),deals=us.map(u=>({q:L===1?pick([2,4]):R(2,L===2?6:8),u}));
+  const item=pick(['muesli bars','pens','apples','juice boxes','cupcakes']),us=shuffle([40,45,50,55,60,65,70,75,80,85,90,95]).slice(0,5),deals=us.map(u=>({q:L===1?pick([2,4]):R(2,L===2?6:8),u}));
   const lab=d=>`${d.q} ${item} for ${money(d.q*d.u)}`,best=deals.reduce((a,b)=>b.u<a.u?b:a);
   return{text:`Which is the <b>best buy</b> (the cheapest price for one)?`,...mc(lab(best),deals.filter(d=>d!==best).map(lab)),hint:`Work out the price of ONE item in each deal.`,
     steps:[...deals.map(d=>`${lab(d)}: ${money(d.q*d.u)} ÷ ${d.q} = ${d.u}c each`),`The cheapest is ${best.u}c each: <b>${lab(best)}</b>`]};
@@ -162,9 +162,9 @@ const TOPIC=Object.fromEntries(TOPICS.map(t=>[t.id,t]));
 function makeQ(tid,L,avoid){
   const t=TOPIC[tid];
   for(let tries=0;tries<12;tries++){
-    const g=pick(t.gens);if(avoid&&g.name===avoid&&t.gens.length>1&&tries<6)continue;
+    MC_N=t.strand==='Thinking'?4:5;const g=pick(t.gens);if(avoid&&g.name===avoid&&t.gens.length>1&&tries<6)continue;
     try{const q=g(L);if(q&&q.choices&&q.choices.length>=3&&q.answer>=0&&!/undefined|NaN/.test(q.text+q.choices.join('')+q.steps.join('')))return Object.assign(q,{topic:tid,level:L,gen:g.name});}
     catch(e){console.warn(g.name,e);}
   }
-  return Object.assign(gTables(1),{topic:tid,level:1,gen:'gTables'});
+  MC_N=5;return Object.assign(gTables(1),{topic:tid,level:1,gen:'gTables'});
 }

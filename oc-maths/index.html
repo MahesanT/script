@@ -10,7 +10,7 @@
   --accent:#2443B8; --accent-ink:#FFFFFF; --accent-soft:#E5EAFA; --hi:#FFD43B; --hi-ink:#3A2E00;
   --ok:#1A8548; --ok-bg:#E1F4E8; --bad:#C42650; --bad-bg:#FBE4EA; --hint-bg:#FFF6D2; --hint-line:#E5C44A; --margin:#EB8FA4;
   --shade:#5A7BEE; --cube-t:#DCE4FF; --cube-l:#A3B5F5; --cube-r:#7088E6; --stick:#C9A26A;
-  --m-red:#E5484D; --m-blue:#3E63DD; --m-green:#2F9E67; --m-yellow:#F2C230;
+  --m-red:#E5484D; --m-blue:#3E63DD; --m-green:#2F9E67; --m-yellow:#F2C230; --m-purple:#8E4EC6;
   --tone-a:#2443B8; --tone-a-bg:#E5EAFA; --tone-b:#0D7A6B; --tone-b-bg:#DCF2EE; --tone-c:#A9520C; --tone-c-bg:#FBEBDA;
   --tone-d:#7E3BB0; --tone-d-bg:#EFE3F9; --tone-e:#C42650; --tone-e-bg:#FBE4EA;
   --f-display:'Fredoka','Trebuchet MS',system-ui,sans-serif; --f-body:'Lexend',system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -95,6 +95,7 @@ input:focus,select:focus{border-color:var(--accent);outline:none}
 .choice.is-wrong .key{background:var(--bad);color:var(--card)}
 .choice.is-right{border-color:var(--ok);background:var(--ok-bg);opacity:1} .choice.is-right .key{background:var(--ok);color:var(--card)}
 .choice.is-picked{border-color:var(--accent);background:var(--accent-soft)} .choice.is-picked .key{background:var(--accent);color:var(--accent-ink)}
+.choices>.choice:last-child:nth-child(odd){grid-column:1/-1}
 .choice:disabled{cursor:default} .choice em{margin-left:auto;font-size:.75rem;color:var(--ink-soft)}
 .feedback{min-height:1.6em;margin-top:14px;font-weight:600} .feedback.ok{color:var(--ok)} .feedback.bad{color:var(--bad)} .feedback.info{color:var(--ink-soft)}
 .earn{display:inline-block;margin-left:6px;padding:1px 9px;border-radius:99px;background:var(--hi);color:var(--hi-ink);font-size:.85rem}
@@ -151,7 +152,7 @@ input:focus,select:focus{border-color:var(--accent);outline:none}
 .sv-ring{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2} .sv-axis{stroke:var(--ink-soft);stroke-width:1.5}
 .sv-gridline{stroke:var(--line);stroke-width:1} .sv-tick-label{fill:var(--ink-soft);font:500 11px var(--f-body)} .sv-cat{fill:var(--ink);font:500 11.5px var(--f-body)}
 .sv-bar{fill:var(--shade)} .sv-jar{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2}
-.m-red{fill:var(--m-red)} .m-blue{fill:var(--m-blue)} .m-green{fill:var(--m-green)} .m-yellow{fill:var(--m-yellow)}
+.m-purple{fill:var(--m-purple)} .m-red{fill:var(--m-red)} .m-blue{fill:var(--m-blue)} .m-green{fill:var(--m-green)} .m-yellow{fill:var(--m-yellow)}
 .m-red,.m-blue,.m-green,.m-yellow{stroke:var(--ink);stroke-opacity:.35;stroke-width:1.5}
 .sv-stick{stroke:var(--stick);stroke-width:5;stroke-linecap:round} .sv-head{fill:var(--bad)}
 .modes.two{grid-template-columns:1fr}
@@ -170,4 +171,5 @@ input:focus,select:focus{border-color:var(--accent);outline:none}
 <script src="gen-measure.js"></script>
 <script src="gen-reason.js"></script>
 <script src="gen-thinking.js"></script>
+<script src="gen-official.js"></script>
 <script src="app.js"></script>

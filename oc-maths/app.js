@@ -59,7 +59,7 @@ function vQuestion(){
   const q=S.q,t=TOPIC[q.topic],st=P.settings;
   const canHint=!S.done&&S.tries>=st.hintAfter&&!S.hint,canSolve=!S.done&&S.tries>=st.solveAfter;
   const ch=q.choices.map((c,i)=>{let cls='choice';if(S.wrong.includes(i))cls+=' is-wrong';if(S.done&&i===q.answer)cls+=' is-right';
-    return`<button class="${cls}" data-act="choose" data-arg="${i}" ${S.done||S.wrong.includes(i)?'disabled':''}><span class="key">${'ABCD'[i]}</span><span class="val">${c}</span></button>`;}).join('');
+    return`<button class="${cls}" data-act="choose" data-arg="${i}" ${S.done||S.wrong.includes(i)?'disabled':''}><span class="key">${'ABCDE'[i]}</span><span class="val">${c}</span></button>`;}).join('');
   let fb='',fc='';
   if(S.done&&!S.revealed){fb=`${S.praise} <span class="earn">+${S.earned} ★</span>`;fc='ok';}
   else if(S.revealed){fb='Read the working carefully. You\'ll be ready for the next one.';fc='info';}
@@ -90,7 +90,7 @@ function vSummary(){
 }
 function vTest(){
   const q=S.qs[S.i],left=Math.max(0,(S.end-Date.now())/1000),ans=S.ans.filter(a=>a!==null).length;
-  const ch=q.choices.map((c,i)=>`<button class="choice${S.ans[S.i]===i?' is-picked':''}" data-act="tPick" data-arg="${i}"><span class="key">${'ABCD'[i]}</span><span class="val">${c}</span></button>`).join('');
+  const ch=q.choices.map((c,i)=>`<button class="choice${S.ans[S.i]===i?' is-picked':''}" data-act="tPick" data-arg="${i}"><span class="key">${'ABCDE'[i]}</span><span class="val">${c}</span></button>`).join('');
   const grid=S.qs.map((_,i)=>`<button class="cell${S.ans[i]!==null?' done':''}${S.flag[i]?' flag':''}${i===S.i?' cur':''}" data-act="tGo" data-arg="${i}" aria-label="Question ${i+1}">${i+1}</button>`).join('');
   return`<div class="testbar"><div><b>${S.testType==='think'?'Thinking Skills':'Maths'} mock test</b><span>Question ${S.i+1} of ${S.qs.length} · ${ans} answered</span></div><div id="timer" class="timer${left<300?' low':''}">${mmss(left)}</div></div>
   <article class="qcard"><div class="qmeta"><span class="chip tone-${TOPIC[q.topic].tone}">${TOPIC[q.topic].name}</span>${S.flag[S.i]?'<span class="lvl">Flagged</span>':''}</div>
@@ -109,7 +109,7 @@ function vResult(){
   const list=S.qs.map((q,i)=>{const a=S.ans[i],st=a===null?'skip':a===q.answer?'ok':'bad',open=S.open===i;
     return`<li class="rv ${st}"><button class="rvhead" data-act="rToggle" data-arg="${i}"><span class="rvn">${i+1}</span><span class="rvt">${TOPIC[q.topic].name}</span><span class="pill ${st==='ok'?'ok':st==='bad'?'bad':'mid'}">${st==='ok'?'Correct':st==='bad'?'Wrong':'Skipped'}</span></button>
     ${open?`<div class="rvbody"><div class="qtext">${q.text}</div>${q.visual?`<div class="visual">${q.visual}</div>`:''}
-      <div class="choices">${q.choices.map((c,j)=>`<div class="choice static${j===q.answer?' is-right':''}${j===a&&a!==q.answer?' is-wrong':''}"><span class="key">${'ABCD'[j]}</span><span class="val">${c}</span>${j===a?'<em>your answer</em>':''}</div>`).join('')}</div>
+      <div class="choices">${q.choices.map((c,j)=>`<div class="choice static${j===q.answer?' is-right':''}${j===a&&a!==q.answer?' is-wrong':''}"><span class="key">${'ABCDE'[j]}</span><span class="val">${c}</span>${j===a?'<em>your answer</em>':''}</div>`).join('')}</div>
       ${S.solved[i]?working(q):`<div class="helpers"><button class="btn ghost" data-act="rSolve" data-arg="${i}">${st==='ok'?'See the working':'Show me how to solve it'}</button></div>`}</div>`:''}</li>`;}).join('');
   const wrongN=S.qs.filter((q,i)=>S.ans[i]!==q.answer).length;
   return`<section class="panel center"><p class="eyebrow">${S.testType==='think'?'Thinking Skills':'Maths'} mock test result</p><h1>${R0.score} / ${R0.total}</h1><p class="lede">${pct}% · time used ${mmss(R0.secs)}. ${verdict}</p>
@@ -147,7 +147,7 @@ function vParent(){
     <div class="setting"><label for="pname">Name</label><input id="pname" data-set="name" value="${esc(P.name)}" maxlength="20"></div>
     <p class="lede sm">Levels adjust on their own: 3 right first try in a row moves a topic up; needing the working twice moves it down. Progress is saved in this browser on this device.</p>
     ${S.resetAsk?`<div class="confirm"><p>Delete all stars, levels and test history?</p><div class="row"><button class="btn danger" data-act="resetYes">Yes, reset</button><button class="btn ghost" data-act="resetNo">Cancel</button></div></div>`:`<div class="row"><button class="btn ghost" data-act="resetAsk">Reset all progress</button></div>`}</section>
-  <section class="panel"><h2 class="sec">What's covered</h2><p class="lede sm">Questions follow the NSW Mathematics K–10 syllabus for Stage 2 (Years 3–4), stretching into early Stage 3 on Level 3: whole numbers to 6 digits, addition and subtraction, multiplication and division, fractions and decimals, patterns and algebra, length, area, volume, mass and capacity, time, money, 2D and 3D shapes, angles, position, data and chance. The Thinking Skills section covers the OC Thinking Skills paper (30 questions in 30 minutes): ordering and seating puzzles, "must be true" logic, truth-teller puzzles, cube nets, turning and flipping shapes, picture patterns, codes, counting and balance puzzles, and judging arguments (flaws, assumptions, what strengthens or weakens a claim). The OC problem-solving topic and the maths mock test practise the multi-step reasoning style of the NSW Opportunity Class placement test (Mathematical Reasoning: 35 questions in 40 minutes). Every question is generated fresh, so she will not see the same paper twice.</p></section>`;
+  <section class="panel"><h2 class="sec">What's covered</h2><p class="lede sm">Questions follow the NSW Mathematics K–10 syllabus for Stage 2 (Years 3–4), stretching into early Stage 3 on Level 3: whole numbers to 6 digits, addition and subtraction, multiplication and division, fractions and decimals, patterns and algebra, length, area, volume, mass and capacity, time, money, 2D and 3D shapes, angles, position, data and chance. The Thinking Skills section covers the OC Thinking Skills paper (30 questions in 30 minutes): ordering and seating puzzles, "must be true" logic, truth-teller puzzles, cube nets, turning and flipping shapes, picture patterns, codes, counting and balance puzzles, and judging arguments (flaws, assumptions, what strengthens or weakens a claim). The OC problem-solving topic and the maths mock test practise the multi-step reasoning style of the NSW Opportunity Class placement test (Mathematical Reasoning: 35 questions in 40 minutes). Formats follow the department's published practice tests: maths questions have five options (A–E), Thinking Skills questions have four. Question styles such as multi-step bus problems, views of cube models, pet and timetable deductions, and "which statement, if true, best supports" arguments are modelled on those samples, but every question is the app's own and is generated fresh, so she will not see the same paper twice.</p></section>`;
 }
 
 // ---------- flow ----------
@@ -230,7 +230,7 @@ app.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='nameform'
 app.addEventListener('change',e=>{const k=e.target.dataset.set;if(!k)return;if(k==='name'){P.name=e.target.value.trim();}else P.settings[k]=+e.target.value;save();render();});
 document.addEventListener('keydown',e=>{
   if(e.target.matches('input,select,textarea'))return;
-  const k=e.key.toLowerCase(),idx='1234'.indexOf(k)>=0?'1234'.indexOf(k):'abcd'.indexOf(k);
+  const k=e.key.toLowerCase(),idx='12345'.indexOf(k)>=0?'12345'.indexOf(k):'abcde'.indexOf(k);
   if(S.screen==='q'){if(idx>=0&&k.length===1)ACT.choose(idx);else if(e.key==='Enter'&&S.done)ACT.next();}
   else if(S.screen==='test'){if(idx>=0&&k.length===1)ACT.tPick(idx);else if(e.key==='ArrowRight')ACT.tNext();else if(e.key==='ArrowLeft')ACT.tPrev();}
   else if(S.screen==='sprint'&&S.sp.phase==='run'){if(/^[0-9]$/.test(e.key))ACT.spKey(e.key);else if(e.key==='Backspace')ACT.spKey('⌫');else if(e.key==='Enter')ACT.spKey('✓');}
