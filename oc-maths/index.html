@@ -171,7 +171,33 @@ input:focus,select:focus{border-color:var(--accent);outline:none}
 .working .tile{margin:4px 0} .answer-line span:has(.tile){display:inline-block;vertical-align:middle;padding:4px 8px} .answer-line .tile{display:block;margin:0}
 @media (max-width:720px){.modes{grid-template-columns:1fr}.topics{grid-template-columns:1fr}}
 @media (max-width:480px){.choices{grid-template-columns:1fr}.qcard,.panel{padding:16px}.helpers .primary{margin-left:0;width:100%}.qtext{font-size:1.1rem}.tally span+span{display:none}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* celebrations */
+#fx{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+#fx canvas{position:absolute;inset:0;width:100%;height:100%}
+.koala{position:absolute;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) - 12px);display:flex;flex-direction:column;align-items:flex-end;animation:kpop 2.9s cubic-bezier(.3,1.4,.5,1) forwards}
+.koala.big svg{width:150px;height:180px}
+.koala svg{overflow:visible;margin-right:10px}
+.koala .kbody{transform-box:fill-box;transform-origin:50% 100%;animation:kwiggle .45s ease-in-out .35s 4 alternate}
+.bubble{background:var(--card);color:var(--ink);border:2px solid var(--ink);border-radius:16px;padding:8px 12px;font:600 1rem/1.3 var(--f-display);max-width:240px;margin:0 24px 8px 0;position:relative;box-shadow:0 4px 0 var(--ink)}
+.bubble::after{content:"";position:absolute;right:30px;bottom:-11px;border:10px solid transparent;border-top-color:var(--ink);border-bottom:0}
+@keyframes kpop{0%{transform:translateY(115%)}13%{transform:translateY(0)}84%{transform:translateY(0)}100%{transform:translateY(125%)}}
+@keyframes kwiggle{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
+.shades,.hat{animation:drop .45s cubic-bezier(.3,1.5,.5,1) .25s both}
+@keyframes drop{from{transform:translateY(-70px);opacity:0}to{transform:none;opacity:1}}
+.roo{position:absolute;left:0;bottom:env(safe-area-inset-bottom,0px);animation:roox 3.2s linear forwards}
+.roo-in{animation:rooy .53s ease-in-out infinite}
+@keyframes roox{from{transform:translateX(-130px)}to{transform:translateX(calc(100vw + 30px))}}
+@keyframes rooy{0%,100%{transform:translateY(0)}50%{transform:translateY(-70px)}}
+.spark{position:absolute;margin:-9px 0 0 -9px;animation:spark .8s ease-out forwards}
+@keyframes spark{from{transform:translate(0,0) scale(.4);opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(1.2) rotate(90deg);opacity:0}}
+.floaty{position:absolute;transform:translateX(-50%);font:700 1.6rem var(--f-display);color:var(--ok);animation:floaty .9s ease-out forwards}
+@keyframes floaty{to{transform:translate(-50%,-50px);opacity:0}}
+.fx-banner{position:absolute;left:50%;top:32%;transform:translate(-50%,-50%);font:700 clamp(2rem,8vw,3.4rem) var(--f-display);color:#FFD43B;-webkit-text-stroke:2px #18224A;text-shadow:0 5px 0 #18224A;animation:ban 2.2s ease-out forwards;white-space:nowrap}
+@keyframes ban{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}15%{transform:translate(-50%,-50%) scale(1.15);opacity:1}25%{transform:translate(-50%,-50%) scale(1)}85%{opacity:1}100%{opacity:0}}
+.choices .choice.is-right:not(.static){animation:rightpop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes rightpop{0%{transform:scale(1)}40%{transform:scale(1.05)}100%{transform:scale(1)}}
+.soundbtn{background:none;border:1.5px solid var(--line);border-radius:99px;padding:2px 10px;font-size:.8rem;color:var(--ink-soft);cursor:pointer}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}.fx-banner{animation:none;font-size:1.6rem}.choices .choice.is-right{animation:none}}
 </style>
 <div id="app"></div>
 <script src="core.js"></script>
@@ -185,4 +211,5 @@ input:focus,select:focus{border-color:var(--accent);outline:none}
 <script src="read-p1.js"></script>
 <script src="read-p2.js"></script>
 <script src="read-p3.js"></script>
+<script src="celebrate.js"></script>
 <script src="app.js"></script>

@@ -1,6 +1,6 @@
 // App: profile, practice sessions with locked help, OC mock test, times-table sprint, parent corner.
 const KEY='ocmaths.v1';
-function defaults(){return{name:'',stars:0,topics:{},tests:[],sprintBest:0,readSeen:{},settings:{hintAfter:1,solveAfter:2},day:{last:'',streak:0},daily:''};}
+function defaults(){return{name:'',stars:0,topics:{},tests:[],sprintBest:0,readSeen:{},settings:{hintAfter:1,solveAfter:2,fx:1,sound:true},day:{last:'',streak:0},daily:''};}
 let P=defaults();
 try{const s=JSON.parse(localStorage.getItem(KEY));if(s)P=Object.assign(defaults(),s,{readSeen:s.readSeen||{}},{settings:Object.assign(defaults().settings,s.settings||{})});}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(P));}catch(e){}};
@@ -23,7 +23,7 @@ function vHeader(){
   const inTest=S.screen==='test';
   return`<header class="top"><div class="top-in">
     <button class="brand" data-act="${inTest?'':'home'}" ${inTest?'disabled':''}><span class="mark">÷</span>OC Maths Coach</button>
-    <div class="tally"><span title="Stars earned"><b>★ ${P.stars}</b></span><span title="Days in a row">${P.day.streak||0}-day streak</span></div>
+    <div class="tally"><span title="Stars earned"><b>★ ${P.stars}</b></span><span title="Days in a row">${P.day.streak||0}-day streak</span><button class="soundbtn" data-act="sound" aria-pressed="${P.settings.sound!==false}">${P.settings.sound===false?'Sound off':'Sound on'}</button></div>
   </div></header>`;
 }
 function vHome(){
@@ -150,6 +150,7 @@ function vParent(){
   <section class="panel"><h2 class="sec">Help settings</h2>
     <div class="setting"><label for="hintAfter">Hint unlocks after</label>${sel('hintAfter',P.settings.hintAfter,[[1,'1 wrong try'],[2,'2 wrong tries']])}</div>
     <div class="setting"><label for="solveAfter">Full working and answer unlock after</label>${sel('solveAfter',P.settings.solveAfter,[[1,'1 wrong try'],[2,'2 wrong tries'],[3,'3 wrong tries']])}</div>
+    <div class="setting"><label for="fx">Celebration animations</label>${sel('fx',P.settings.fx??1,[[1,'On'],[0,'Off']])}</div>
     <div class="setting"><label for="pname">Name</label><input id="pname" data-set="name" value="${esc(P.name)}" maxlength="20"></div>
     <p class="lede sm">Levels adjust on their own: 3 right first try in a row moves a topic up; needing the working twice moves it down. Progress is saved in this browser on this device.</p>
     ${S.resetAsk?`<div class="confirm"><p>Delete all stars, levels and test history?</p><div class="row"><button class="btn danger" data-act="resetYes">Yes, reset</button><button class="btn ghost" data-act="resetNo">Cancel</button></div></div>`:`<div class="row"><button class="btn ghost" data-act="resetAsk">Reset all progress</button></div>`}</section>
@@ -178,7 +179,7 @@ function startSession(kind,arg){
 }
 function nextQ(first){
   if(!first)S.i++;
-  if(S.i>=S.n){if(S.kind==='daily'){P.daily=today();save();}S.screen='summary';render();window.scrollTo(0,0);return;}
+  if(S.i>=S.n){if(S.kind==='daily'){P.daily=today();save();}S.screen='summary';render();window.scrollTo(0,0);if(S.results.filter(r=>r.first).length>=Math.ceil(S.n*.7))setTimeout(()=>celebrate('round'),300);return;}
   let q;if(S.kind==='list')q={...S.list[S.i]};else if(S.kind==='redo'&&S.list[S.i].q&&TOPIC[S.list[S.i].topic].strand==='Reading')q={...S.list[S.i].q};else if(S.kind==='redo'){const o=S.list[S.i];q=makeQ(o.topic,o.level,null);if(o.gen){for(let k=0;k<20&&q.gen!==o.gen;k++)q=makeQ(o.topic,o.level,null);}}
   else{const tid=S.kind==='topic'?S.arg:S.plan[S.i];q=makeQ(tid,tstat(tid).level,S.q&&S.q.gen);}
   Object.assign(S,{q,tries:0,wrong:[],hint:false,revealed:false,done:false,work:false});render();window.scrollTo(0,0);
@@ -195,10 +196,11 @@ const ACT={
   again:()=>startSession(S.kind==='redo'?'daily':S.kind==='list'?'topic':S.kind,S.arg),
   redoShown:()=>startSession('redo',S.results.filter(r=>r.revealed)),
   choose:i=>{i=+i;if(S.done||S.wrong.includes(i))return;
-    if(i===S.q.answer){S.done=true;S.earned=S.tries===0?3:S.tries===1?2:1;P.stars+=S.earned;S.starsEarned+=S.earned;S.praise=pick(PRAISE);record(S.tries===0,false);}
+    if(i===S.q.answer){const lu=S.levelUps.length,first=S.tries===0;S.done=true;S.earned=first?3:S.tries===1?2:1;P.stars+=S.earned;S.starsEarned+=S.earned;S.praise=pick(PRAISE);record(first,false);
+      S.run=first?(S.run||0)+1:0;render();celebrate(S.levelUps.length>lu?'levelup':!first?'after':S.run%5===0?'streak5':S.run===3?'streak3':'correct',app.querySelector('.choice.is-right'));return;}
     else{S.wrong.push(i);S.tries++;}render();},
   hint:()=>{S.hint=true;render();},
-  solve:()=>{S.revealed=true;S.done=true;record(false,true);render();},
+  solve:()=>{S.revealed=true;S.done=true;S.run=0;record(false,true);render();},
   work:()=>{S.work=true;render();},
   next:()=>nextQ(),
   test:type=>{type=type==='think'||type==='read'?type:'maths';const plan=type==='read'?null:type==='think'?shuffle([...Array(8).fill('logic'),...Array(8).fill('spatial'),...Array(7).fill('puzzle'),...Array(7).fill('critical')])
@@ -212,24 +214,25 @@ const ACT={
   tFlag:()=>{S.flag[S.i]=!S.flag[S.i];render();},tAsk:()=>{S.confirm=true;render();},tCancel:()=>{S.confirm=false;render();},
   tFinish:()=>{clearInterval(timer);timer=null;const secs=Math.min(S.limit,Math.round((Date.now()-S.start)/1000)),score=S.qs.filter((q,i)=>S.ans[i]===q.answer).length;
     P.tests.push({date:new Date().toLocaleDateString('en-AU'),score,total:S.qs.length,secs,type:S.testType});P.tests=P.tests.slice(-20);markDay();save();
-    S.screen='result';S.res={score,total:S.qs.length,secs};S.open=null;S.solved={};render();window.scrollTo(0,0);},
+    S.screen='result';S.res={score,total:S.qs.length,secs};S.open=null;S.solved={};render();window.scrollTo(0,0);if(score/S.qs.length>=.7)setTimeout(()=>celebrate('test'),300);},
   rToggle:i=>{S.open=S.open===+i?null:+i;render();},rSolve:i=>{S.solved[+i]=true;render();},
   redoTest:()=>startSession('redo',S.qs.filter((q,i)=>S.ans[i]!==q.answer).map(q=>({topic:q.topic,level:q.level,gen:q.gen,q}))),
   sprint:()=>go('sprint',{sp:{phase:'setup',tables:(S.sp&&S.sp.tables)||[2,3,4,5,6,7,8,9,10,11,12]}}),
   spToggle:n=>{n=+n;const t=S.sp.tables;S.sp.tables=t.includes(n)?t.filter(x=>x!==n):[...t,n].sort((a,b)=>a-b);render();},
   spStart:()=>{clearInterval(timer);Object.assign(S.sp,{phase:'run',score:0,wrongs:[],input:'',flash:false,end:Date.now()+60000});spNew();render();
     timer=setInterval(()=>{const left=(S.sp.end-Date.now())/1000,el=document.getElementById('timer');
-      if(left<=0){clearInterval(timer);timer=null;S.sp.phase='done';S.sp.newBest=S.sp.score>P.sprintBest;if(S.sp.newBest)P.sprintBest=S.sp.score;markDay();save();render();return;}
+      if(left<=0){clearInterval(timer);timer=null;S.sp.phase='done';S.sp.newBest=S.sp.score>P.sprintBest;if(S.sp.newBest)P.sprintBest=S.sp.score;markDay();save();render();if(S.sp.newBest&&S.sp.score>0)celebrate('best',document.querySelector('.panel h1'));return;}
       if(el){el.textContent=mmss(left);el.classList.toggle('low',left<10);}},250);},
   spKey:k=>{const sp=S.sp;if(sp.phase!=='run'||sp.flash)return;
     if(k==='⌫')sp.input=sp.input.slice(0,-1);else if(k==='✓'){if(sp.input)spCheck(true);return;}else if(sp.input.length<3)sp.input+=k;
     spCheck(false);render();},
+  sound:()=>{P.settings.sound=P.settings.sound===false;save();render();if(P.settings.sound)chime([659,880],.08);},
   resetAsk:()=>{S.resetAsk=true;render();},resetNo:()=>{S.resetAsk=false;render();},
   resetYes:()=>{const name=P.name;P=defaults();P.name=name;save();go('parent');},
 };
 function spNew(){const sp=S.sp;let a,b;do{a=pick(sp.tables);b=R(2,12);}while(sp.a===a&&sp.b===b);sp.a=a;sp.b=b;sp.input='';}
 function spCheck(force){const sp=S.sp,ans=sp.a*sp.b;
-  if(+sp.input===ans){sp.score++;spNew();render();return;}
+  if(+sp.input===ans){sp.score++;spNew();render();sprintPop(document.querySelector('.testbar b'));return;}
   if(force||sp.input.length>=String(ans).length){sp.wrongs.push([sp.a,sp.b]);sp.flash=true;render();
     setTimeout(()=>{if(S.sp===sp&&sp.phase==='run'){sp.flash=false;spNew();render();}},1100);}}
 
