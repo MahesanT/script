@@ -1,15 +1,17 @@
 // App: profile, practice sessions with locked help, OC mock test, times-table sprint, parent corner.
 const KEY='ocmaths.v1';
-function defaults(){return{name:'',stars:0,topics:{},tests:[],sprintBest:0,settings:{hintAfter:1,solveAfter:2},day:{last:'',streak:0},daily:''};}
+function defaults(){return{name:'',stars:0,topics:{},tests:[],sprintBest:0,readSeen:{},settings:{hintAfter:1,solveAfter:2},day:{last:'',streak:0},daily:''};}
 let P=defaults();
-try{const s=JSON.parse(localStorage.getItem(KEY));if(s)P=Object.assign(defaults(),s,{settings:Object.assign(defaults().settings,s.settings||{})});}catch(e){}
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s)P=Object.assign(defaults(),s,{readSeen:s.readSeen||{}},{settings:Object.assign(defaults().settings,s.settings||{})});}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(P));}catch(e){}};
 const tstat=id=>P.topics[id]||(P.topics[id]={level:1,att:0,first:0,streak:0,miss:0});
 const LEVELS=['','Level 1 · Starter','Level 2 · Building','Level 3 · Exam ready'];
 const today=()=>new Date().toLocaleDateString('en-CA');
 function markDay(){const t=today();if(P.day.last===t)return;const y=new Date(Date.now()-864e5).toLocaleDateString('en-CA');P.day.streak=P.day.last===y?P.day.streak+1:1;P.day.last=t;}
 const acc=s=>s.att?Math.round(100*s.first/s.att):null;
+const oneCol=q=>q.choices.some(c=>c.length>40&&!c.includes('<svg'));
 const mmss=s=>`${Math.floor(s/60)}:${pad(Math.floor(s%60))}`;
+const paperName=t=>t==='think'?'Thinking Skills':t==='read'?'Reading':'Maths';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const PRAISE=['Brilliant!','Spot on!','You nailed it!','Excellent thinking!','Correct!','Super work!'];
 
@@ -28,10 +30,10 @@ function vHome(){
   const doneToday=P.daily===today();
   const tile=t=>{const s=tstat(t.id),a=acc(s);
     return`<button class="topic" data-act="topic" data-arg="${t.id}"><span class="glyph tone-${t.tone}">${t.glyph}</span>
-      <span class="tinfo"><span class="tname">${t.name}</span><span class="tmeta">${t.strand} · Level ${s.level}</span>
-      <span class="meter" aria-label="Level ${s.level} of 3"><i style="width:${Math.round(((s.level-1)/2*70)+(a??0)*.3)}%"></i></span>
+      <span class="tinfo"><span class="tname">${t.name}</span><span class="tmeta">${t.strand==='Reading'?`${READING.length} texts to practise`:`${t.strand} · Level ${s.level}`}</span>
+      <span class="meter" aria-label="Level ${s.level} of 3"><i style="width:${t.strand==='Reading'?(a??0):Math.round(((s.level-1)/2*70)+(a??0)*.3)}%"></i></span>
       <span class="tmeta">${a===null?'Not started':`${a}% first try · ${s.att} done`}</span></span></button>`;};
-  const bestOf=type=>{const ts=P.tests.filter(t=>(t.type||'maths')===type);return ts.length?Math.max(...ts.map(t=>t.score)):null;},best=bestOf('maths'),bestT=bestOf('think');
+  const bestOf=type=>{const ts=P.tests.filter(t=>(t.type||'maths')===type);return ts.length?Math.max(...ts.map(t=>t.score)):null;},best=bestOf('maths'),bestT=bestOf('think'),bestR=bestOf('read');
   return`<section class="hero">
     <div class="hello"><p class="eyebrow">NSW Stage 2 maths · OC test practice</p>
       <h1>${P.name?`Hi ${esc(P.name)}!`:'Hi there!'} Ready to train?</h1>
@@ -49,6 +51,10 @@ function vHome(){
   <p class="lede sm">The OC test's Thinking Skills paper: logic puzzles, shapes in your head, codes and judging arguments.</p>
   <div class="modes two"><button class="mode m-test" data-act="test" data-arg="think"><span class="mtag">30 questions · 30 min</span><span class="mtitle">Thinking Skills mock test</span><span class="mdesc">Same format as the OC Thinking Skills paper. No help until you finish.${bestT!==null?` Best so far: <b>${bestT}/30</b>.`:''}</span></button></div>
   <div class="topics">${THINK.map(tile).join('')}</div>
+  <h2 class="sec">Reading</h2>
+  <p class="lede sm">The OC Reading paper has five parts: a story, a passage with missing words, a poem, an article with missing sentences, and four short extracts to match.</p>
+  <div class="modes two"><button class="mode m-test" data-act="test" data-arg="read"><span class="mtag">33 answers · 40 min</span><span class="mtitle">Reading mock test</span><span class="mdesc">A full paper in the same five-part layout as the OC Reading test. No help until you finish.${bestR!==null?` Best so far: <b>${bestR}/33</b>.`:''}</span></button></div>
+  <div class="topics">${RPARTS.map(tile).join('')}</div>
   <p class="foot"><button class="link" data-act="parent">Parent corner</button> · progress and settings</p>`;
 }
 function working(q){
@@ -59,7 +65,7 @@ function vQuestion(){
   const q=S.q,t=TOPIC[q.topic],st=P.settings;
   const canHint=!S.done&&S.tries>=st.hintAfter&&!S.hint,canSolve=!S.done&&S.tries>=st.solveAfter;
   const ch=q.choices.map((c,i)=>{let cls='choice';if(S.wrong.includes(i))cls+=' is-wrong';if(S.done&&i===q.answer)cls+=' is-right';
-    return`<button class="${cls}" data-act="choose" data-arg="${i}" ${S.done||S.wrong.includes(i)?'disabled':''}><span class="key">${'ABCDE'[i]}</span><span class="val">${c}</span></button>`;}).join('');
+    return`<button class="${cls}" data-act="choose" data-arg="${i}" ${S.done||S.wrong.includes(i)?'disabled':''}><span class="key">${'ABCDEFG'[i]}</span><span class="val">${c}</span></button>`;}).join('');
   let fb='',fc='';
   if(S.done&&!S.revealed){fb=`${S.praise} <span class="earn">+${S.earned} ★</span>`;fc='ok';}
   else if(S.revealed){fb='Read the working carefully. You\'ll be ready for the next one.';fc='info';}
@@ -72,8 +78,8 @@ function vQuestion(){
     <div class="prog"><span>${S.label} · Question ${S.i+1} of ${S.n}</span><div class="bar"><i style="width:${(S.i/S.n)*100}%"></i></div></div></div>
   <article class="qcard">
     <div class="qmeta"><span class="chip tone-${t.tone}">${t.name}</span><span class="lvl">${LEVELS[q.level]}</span></div>
-    <div class="qtext">${q.text}</div>${q.visual?`<div class="visual">${q.visual}</div>`:''}
-    <div class="choices">${ch}</div>
+    ${q.passage?`<div class="passage" tabindex="0">${q.passage}</div>`:''}<div class="qtext">${q.text}</div>${q.visual?`<div class="visual">${q.visual}</div>`:''}
+    <div class="choices${oneCol(q)?' one':''}">${ch}</div>
     <div class="feedback ${fc}" role="status">${fb}</div>
     <div class="helpers">${helpers}</div>
     ${S.hint&&!S.revealed?`<div class="hint"><b>Hint</b>${q.hint}</div>`:''}
@@ -90,11 +96,11 @@ function vSummary(){
 }
 function vTest(){
   const q=S.qs[S.i],left=Math.max(0,(S.end-Date.now())/1000),ans=S.ans.filter(a=>a!==null).length;
-  const ch=q.choices.map((c,i)=>`<button class="choice${S.ans[S.i]===i?' is-picked':''}" data-act="tPick" data-arg="${i}"><span class="key">${'ABCDE'[i]}</span><span class="val">${c}</span></button>`).join('');
+  const ch=q.choices.map((c,i)=>`<button class="choice${S.ans[S.i]===i?' is-picked':''}" data-act="tPick" data-arg="${i}"><span class="key">${'ABCDEFG'[i]}</span><span class="val">${c}</span></button>`).join('');
   const grid=S.qs.map((_,i)=>`<button class="cell${S.ans[i]!==null?' done':''}${S.flag[i]?' flag':''}${i===S.i?' cur':''}" data-act="tGo" data-arg="${i}" aria-label="Question ${i+1}">${i+1}</button>`).join('');
-  return`<div class="testbar"><div><b>${S.testType==='think'?'Thinking Skills':'Maths'} mock test</b><span>Question ${S.i+1} of ${S.qs.length} · ${ans} answered</span></div><div id="timer" class="timer${left<300?' low':''}">${mmss(left)}</div></div>
+  return`<div class="testbar"><div><b>${paperName(S.testType)} mock test</b><span>Question ${S.i+1} of ${S.qs.length} · ${ans} answered</span></div><div id="timer" class="timer${left<300?' low':''}">${mmss(left)}</div></div>
   <article class="qcard"><div class="qmeta"><span class="chip tone-${TOPIC[q.topic].tone}">${TOPIC[q.topic].name}</span>${S.flag[S.i]?'<span class="lvl">Flagged</span>':''}</div>
-    <div class="qtext">${q.text}</div>${q.visual?`<div class="visual">${q.visual}</div>`:''}<div class="choices">${ch}</div>
+    ${q.passage?`<div class="passage" tabindex="0">${q.passage}</div>`:''}<div class="qtext">${q.text}</div>${q.visual?`<div class="visual">${q.visual}</div>`:''}<div class="choices${oneCol(q)?' one':''}">${ch}</div>
     <div class="helpers"><button class="btn ghost" data-act="tPrev" ${S.i===0?'disabled':''}>← Back</button><button class="btn ghost" data-act="tFlag">${S.flag[S.i]?'Unflag':'Flag for later'}</button>
       <button class="btn primary" data-act="tNext">${S.i===S.qs.length-1?'Review':'Next →'}</button></div></article>
   <section class="panel"><h3 class="mini">Jump to a question</h3><div class="grid35">${grid}</div>
@@ -108,11 +114,11 @@ function vResult(){
   const rows=Object.entries(by).map(([id,b])=>`<tr><td>${TOPIC[id].name}</td><td class="num">${b.c}/${b.t}</td><td><span class="pill ${b.c/b.t>=.75?'ok':b.c/b.t>=.5?'mid':'bad'}">${b.c/b.t>=.75?'Strong':b.c/b.t>=.5?'OK':'Practise'}</span></td></tr>`).join('');
   const list=S.qs.map((q,i)=>{const a=S.ans[i],st=a===null?'skip':a===q.answer?'ok':'bad',open=S.open===i;
     return`<li class="rv ${st}"><button class="rvhead" data-act="rToggle" data-arg="${i}"><span class="rvn">${i+1}</span><span class="rvt">${TOPIC[q.topic].name}</span><span class="pill ${st==='ok'?'ok':st==='bad'?'bad':'mid'}">${st==='ok'?'Correct':st==='bad'?'Wrong':'Skipped'}</span></button>
-    ${open?`<div class="rvbody"><div class="qtext">${q.text}</div>${q.visual?`<div class="visual">${q.visual}</div>`:''}
-      <div class="choices">${q.choices.map((c,j)=>`<div class="choice static${j===q.answer?' is-right':''}${j===a&&a!==q.answer?' is-wrong':''}"><span class="key">${'ABCDE'[j]}</span><span class="val">${c}</span>${j===a?'<em>your answer</em>':''}</div>`).join('')}</div>
+    ${open?`<div class="rvbody">${q.passage?`<div class="passage" tabindex="0">${q.passage}</div>`:''}<div class="qtext">${q.text}</div>${q.visual?`<div class="visual">${q.visual}</div>`:''}
+      <div class="choices${oneCol(q)?' one':''}">${q.choices.map((c,j)=>`<div class="choice static${j===q.answer?' is-right':''}${j===a&&a!==q.answer?' is-wrong':''}"><span class="key">${'ABCDEFG'[j]}</span><span class="val">${c}</span>${j===a?'<em>your answer</em>':''}</div>`).join('')}</div>
       ${S.solved[i]?working(q):`<div class="helpers"><button class="btn ghost" data-act="rSolve" data-arg="${i}">${st==='ok'?'See the working':'Show me how to solve it'}</button></div>`}</div>`:''}</li>`;}).join('');
   const wrongN=S.qs.filter((q,i)=>S.ans[i]!==q.answer).length;
-  return`<section class="panel center"><p class="eyebrow">${S.testType==='think'?'Thinking Skills':'Maths'} mock test result</p><h1>${R0.score} / ${R0.total}</h1><p class="lede">${pct}% · time used ${mmss(R0.secs)}. ${verdict}</p>
+  return`<section class="panel center"><p class="eyebrow">${paperName(S.testType)} mock test result</p><h1>${R0.score} / ${R0.total}</h1><p class="lede">${pct}% · time used ${mmss(R0.secs)}. ${verdict}</p>
     <div class="row">${wrongN?`<button class="btn primary" data-act="redoTest">Practise my ${wrongN} mistake${wrongN>1?'s':''}</button>`:''}<button class="btn ghost" data-act="home">Home</button></div></section>
   <section class="panel"><h2 class="sec">By topic</h2><div class="tablewrap"><table class="tbl"><tbody>${rows}</tbody></table></div></section>
   <section class="panel"><h2 class="sec">Review every question</h2><p class="lede sm">Tap a question to see it again. Try to work out the ones you missed before opening the working.</p><ol class="rvlist">${list}</ol></section>`;
@@ -132,9 +138,9 @@ function vSprint(){
     <div class="pad">${[1,2,3,4,5,6,7,8,9,'⌫',0,'✓'].map(k=>`<button class="padk" data-act="spKey" data-arg="${k}">${k}</button>`).join('')}</div></section>`;
 }
 function vParent(){
-  const rows=[...TOPICS,...THINK].map(t=>{const s=tstat(t.id),a=acc(s);return`<tr><td>${t.name}</td><td class="num">${s.level}</td><td class="num">${s.att}</td><td class="num">${a===null?'–':a+'%'}</td></tr>`;}).join('');
-  const tests=P.tests.slice().reverse().map(t=>`<tr><td>${t.date}</td><td>${(t.type||'maths')==='think'?'Thinking Skills':'Maths'}</td><td class="num">${t.score}/${t.total||35}</td><td class="num">${mmss(t.secs)}</td></tr>`).join('');
-  const weak=[...TOPICS,...THINK].map(t=>({t,a:acc(tstat(t.id))})).filter(x=>x.a!==null&&tstat(x.t.id).att>=5).sort((x,y)=>x.a-y.a).slice(0,3);
+  const rows=[...TOPICS,...THINK,...RPARTS].map(t=>{const s=tstat(t.id),a=acc(s);return`<tr><td>${t.name}</td><td class="num">${t.strand==='Reading'?'–':s.level}</td><td class="num">${s.att}</td><td class="num">${a===null?'–':a+'%'}</td></tr>`;}).join('');
+  const tests=P.tests.slice().reverse().map(t=>`<tr><td>${t.date}</td><td>${paperName(t.type||'maths')}</td><td class="num">${t.score}/${t.total||35}</td><td class="num">${mmss(t.secs)}</td></tr>`).join('');
+  const weak=[...TOPICS,...THINK,...RPARTS].map(t=>({t,a:acc(tstat(t.id))})).filter(x=>x.a!==null&&tstat(x.t.id).att>=5).sort((x,y)=>x.a-y.a).slice(0,3);
   const sel=(id,val,opts)=>`<select id="${id}" data-set="${id}">${opts.map(([v,l])=>`<option value="${v}"${v===val?' selected':''}>${l}</option>`).join('')}</select>`;
   return`<div class="qtop"><button class="link" data-act="home">← Home</button></div>
   <section class="panel"><p class="eyebrow">Parent corner</p><h1>${P.name?esc(P.name)+"'s":'Your child\'s'} progress</h1>
@@ -147,13 +153,14 @@ function vParent(){
     <div class="setting"><label for="pname">Name</label><input id="pname" data-set="name" value="${esc(P.name)}" maxlength="20"></div>
     <p class="lede sm">Levels adjust on their own: 3 right first try in a row moves a topic up; needing the working twice moves it down. Progress is saved in this browser on this device.</p>
     ${S.resetAsk?`<div class="confirm"><p>Delete all stars, levels and test history?</p><div class="row"><button class="btn danger" data-act="resetYes">Yes, reset</button><button class="btn ghost" data-act="resetNo">Cancel</button></div></div>`:`<div class="row"><button class="btn ghost" data-act="resetAsk">Reset all progress</button></div>`}</section>
-  <section class="panel"><h2 class="sec">What's covered</h2><p class="lede sm">Questions follow the NSW Mathematics K–10 syllabus for Stage 2 (Years 3–4), stretching into early Stage 3 on Level 3: whole numbers to 6 digits, addition and subtraction, multiplication and division, fractions and decimals, patterns and algebra, length, area, volume, mass and capacity, time, money, 2D and 3D shapes, angles, position, data and chance. The Thinking Skills section covers the OC Thinking Skills paper (30 questions in 30 minutes): ordering and seating puzzles, "must be true" logic, truth-teller puzzles, cube nets, turning and flipping shapes, picture patterns, codes, counting and balance puzzles, and judging arguments (flaws, assumptions, what strengthens or weakens a claim). The OC problem-solving topic and the maths mock test practise the multi-step reasoning style of the NSW Opportunity Class placement test (Mathematical Reasoning: 35 questions in 40 minutes). Formats follow the department's published practice tests: maths questions have five options (A–E), Thinking Skills questions have four. Question styles such as multi-step bus problems, views of cube models, pet and timetable deductions, and "which statement, if true, best supports" arguments are modelled on those samples, but every question is the app's own and is generated fresh, so she will not see the same paper twice.</p></section>`;
+  <section class="panel"><h2 class="sec">What's covered</h2><p class="lede sm">Questions follow the NSW Mathematics K–10 syllabus for Stage 2 (Years 3–4), stretching into early Stage 3 on Level 3: whole numbers to 6 digits, addition and subtraction, multiplication and division, fractions and decimals, patterns and algebra, length, area, volume, mass and capacity, time, money, 2D and 3D shapes, angles, position, data and chance. The Thinking Skills section covers the OC Thinking Skills paper (30 questions in 30 minutes): ordering and seating puzzles, "must be true" logic, truth-teller puzzles, cube nets, turning and flipping shapes, picture patterns, codes, counting and balance puzzles, and judging arguments (flaws, assumptions, what strengthens or weakens a claim). The Reading section has three full papers of original texts in the official five-part layout (story questions, choosing the right word, a poem, missing sentences and matching extracts: 33 answers in 40 minutes). The OC problem-solving topic and the maths mock test practise the multi-step reasoning style of the NSW Opportunity Class placement test (Mathematical Reasoning: 35 questions in 40 minutes). Formats follow the department's published practice tests: maths questions have five options (A–E), Thinking Skills questions have four. Question styles such as multi-step bus problems, views of cube models, pet and timetable deductions, and "which statement, if true, best supports" arguments are modelled on those samples, but every question is the app's own and is generated fresh, so she will not see the same paper twice.</p></section>`;
 }
 
 // ---------- flow ----------
 function render(){
   const v={home:vHome,q:vQuestion,summary:vSummary,test:vTest,result:vResult,sprint:vSprint,parent:vParent}[S.screen]();
   app.innerHTML=vHeader()+`<main class="wrap">${v}</main>`;
+  const g=app.querySelector('.passage .gap.cur');if(g){const box=g.closest('.passage');box.scrollTop=Math.max(0,g.offsetTop-80);}
 }
 function go(screen,extra){clearInterval(timer);timer=null;S=Object.assign({screen},extra||{});render();window.scrollTo(0,0);}
 function weakPlan(n,list){
@@ -163,7 +170,8 @@ function weakPlan(n,list){
 }
 function startSession(kind,arg){
   const base={kind,arg,i:0,results:[],starsEarned:0,levelUps:[]};
-  if(kind==='topic')Object.assign(base,{n:10,label:TOPIC[arg].name});
+  if(kind==='topic'&&TOPIC[arg].strand==='Reading'){const list=pickPart(TOPIC[arg].type);Object.assign(base,{kind:'list',n:list.length,label:TOPIC[arg].name,list});}
+  else if(kind==='topic')Object.assign(base,{n:10,label:TOPIC[arg].name});
   else if(kind==='daily')Object.assign(base,{n:10,label:'Daily 10',plan:shuffle([...weakPlan(7,TOPICS),...weakPlan(3,THINK)])});
   else Object.assign(base,{n:arg.length,label:'Try again',list:arg});
   clearInterval(timer);timer=null;S=Object.assign({screen:'q'},base);nextQ(true);
@@ -171,7 +179,7 @@ function startSession(kind,arg){
 function nextQ(first){
   if(!first)S.i++;
   if(S.i>=S.n){if(S.kind==='daily'){P.daily=today();save();}S.screen='summary';render();window.scrollTo(0,0);return;}
-  let q;if(S.kind==='redo'){const o=S.list[S.i];q=makeQ(o.topic,o.level,null);if(o.gen){for(let k=0;k<20&&q.gen!==o.gen;k++)q=makeQ(o.topic,o.level,null);}}
+  let q;if(S.kind==='list')q={...S.list[S.i]};else if(S.kind==='redo'&&S.list[S.i].q&&TOPIC[S.list[S.i].topic].strand==='Reading')q={...S.list[S.i].q};else if(S.kind==='redo'){const o=S.list[S.i];q=makeQ(o.topic,o.level,null);if(o.gen){for(let k=0;k<20&&q.gen!==o.gen;k++)q=makeQ(o.topic,o.level,null);}}
   else{const tid=S.kind==='topic'?S.arg:S.plan[S.i];q=makeQ(tid,tstat(tid).level,S.q&&S.q.gen);}
   Object.assign(S,{q,tries:0,wrong:[],hint:false,revealed:false,done:false,work:false});render();window.scrollTo(0,0);
 }
@@ -179,12 +187,12 @@ function record(first,revealed){
   const s=tstat(S.q.topic);s.att++;markDay();
   if(first){s.first++;s.streak++;s.miss=0;if(s.streak>=3&&s.level<3){s.level++;s.streak=0;if(!S.levelUps.includes(S.q.topic))S.levelUps.push(S.q.topic);}}
   else{s.streak=0;if(revealed){s.miss++;if(s.miss>=2&&s.level>1){s.level--;s.miss=0;}}}
-  S.results.push({topic:S.q.topic,level:S.q.level,gen:S.q.gen,first,revealed});save();
+  S.results.push({topic:S.q.topic,level:S.q.level,gen:S.q.gen,q:S.q,first,revealed});save();
 }
 const ACT={
   home:()=>go('home'),parent:()=>go('parent'),
   topic:id=>startSession('topic',id),daily:()=>startSession('daily'),
-  again:()=>startSession(S.kind==='redo'?'daily':S.kind,S.arg),
+  again:()=>startSession(S.kind==='redo'?'daily':S.kind==='list'?'topic':S.kind,S.arg),
   redoShown:()=>startSession('redo',S.results.filter(r=>r.revealed)),
   choose:i=>{i=+i;if(S.done||S.wrong.includes(i))return;
     if(i===S.q.answer){S.done=true;S.earned=S.tries===0?3:S.tries===1?2:1;P.stars+=S.earned;S.starsEarned+=S.earned;S.praise=pick(PRAISE);record(S.tries===0,false);}
@@ -193,9 +201,9 @@ const ACT={
   solve:()=>{S.revealed=true;S.done=true;record(false,true);render();},
   work:()=>{S.work=true;render();},
   next:()=>nextQ(),
-  test:type=>{type=type==='think'?'think':'maths';const plan=type==='think'?shuffle([...Array(8).fill('logic'),...Array(8).fill('spatial'),...Array(7).fill('puzzle'),...Array(7).fill('critical')])
+  test:type=>{type=type==='think'||type==='read'?type:'maths';const plan=type==='read'?null:type==='think'?shuffle([...Array(8).fill('logic'),...Array(8).fill('spatial'),...Array(7).fill('puzzle'),...Array(7).fill('critical')])
       :shuffle([...Array(10).fill('reason'),...shuffle(TOPICS.filter(t=>t.id!=='reason').flatMap(t=>[t.id,t.id,t.id])).slice(0,25)]);
-    const qs=[];plan.forEach(tid=>{let q,k=0;do{q=makeQ(tid,Math.random()<.6?2:3);}while(k++<8&&qs.some(o=>o.text===q.text));qs.push(q);});
+    const qs=type==='read'?pickPaper():[];if(plan)plan.forEach(tid=>{let q,k=0;do{q=makeQ(tid,Math.random()<.6?2:3);}while(k++<8&&qs.some(o=>o.text===q.text));qs.push(q);});
     const mins=type==='think'?30:40;go('test',{testType:type,qs,ans:Array(qs.length).fill(null),flag:Array(qs.length).fill(false),i:0,start:Date.now(),end:Date.now()+mins*60*1000,limit:mins*60,confirm:false});
     timer=setInterval(()=>{const left=(S.end-Date.now())/1000,el=document.getElementById('timer');if(left<=0)return ACT.tFinish();if(el){el.textContent=mmss(left);el.classList.toggle('low',left<300);}},1000);},
   tPick:i=>{S.ans[S.i]=+i;render();},
@@ -206,7 +214,7 @@ const ACT={
     P.tests.push({date:new Date().toLocaleDateString('en-AU'),score,total:S.qs.length,secs,type:S.testType});P.tests=P.tests.slice(-20);markDay();save();
     S.screen='result';S.res={score,total:S.qs.length,secs};S.open=null;S.solved={};render();window.scrollTo(0,0);},
   rToggle:i=>{S.open=S.open===+i?null:+i;render();},rSolve:i=>{S.solved[+i]=true;render();},
-  redoTest:()=>startSession('redo',S.qs.filter((q,i)=>S.ans[i]!==q.answer).map(q=>({topic:q.topic,level:q.level,gen:q.gen}))),
+  redoTest:()=>startSession('redo',S.qs.filter((q,i)=>S.ans[i]!==q.answer).map(q=>({topic:q.topic,level:q.level,gen:q.gen,q}))),
   sprint:()=>go('sprint',{sp:{phase:'setup',tables:(S.sp&&S.sp.tables)||[2,3,4,5,6,7,8,9,10,11,12]}}),
   spToggle:n=>{n=+n;const t=S.sp.tables;S.sp.tables=t.includes(n)?t.filter(x=>x!==n):[...t,n].sort((a,b)=>a-b);render();},
   spStart:()=>{clearInterval(timer);Object.assign(S.sp,{phase:'run',score:0,wrongs:[],input:'',flash:false,end:Date.now()+60000});spNew();render();
@@ -230,9 +238,9 @@ app.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='nameform'
 app.addEventListener('change',e=>{const k=e.target.dataset.set;if(!k)return;if(k==='name'){P.name=e.target.value.trim();}else P.settings[k]=+e.target.value;save();render();});
 document.addEventListener('keydown',e=>{
   if(e.target.matches('input,select,textarea'))return;
-  const k=e.key.toLowerCase(),idx='12345'.indexOf(k)>=0?'12345'.indexOf(k):'abcde'.indexOf(k);
-  if(S.screen==='q'){if(idx>=0&&k.length===1)ACT.choose(idx);else if(e.key==='Enter'&&S.done)ACT.next();}
-  else if(S.screen==='test'){if(idx>=0&&k.length===1)ACT.tPick(idx);else if(e.key==='ArrowRight')ACT.tNext();else if(e.key==='ArrowLeft')ACT.tPrev();}
+  const k=e.key.toLowerCase(),idx='1234567'.indexOf(k)>=0?'1234567'.indexOf(k):'abcdefg'.indexOf(k);
+  if(S.screen==='q'){if(idx>=0&&k.length===1&&idx<S.q.choices.length)ACT.choose(idx);else if(e.key==='Enter'&&S.done)ACT.next();}
+  else if(S.screen==='test'){if(idx>=0&&k.length===1&&idx<S.qs[S.i].choices.length)ACT.tPick(idx);else if(e.key==='ArrowRight')ACT.tNext();else if(e.key==='ArrowLeft')ACT.tPrev();}
   else if(S.screen==='sprint'&&S.sp.phase==='run'){if(/^[0-9]$/.test(e.key))ACT.spKey(e.key);else if(e.key==='Backspace')ACT.spKey('⌫');else if(e.key==='Enter')ACT.spKey('✓');}
 });
 render();
