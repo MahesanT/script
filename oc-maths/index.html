@@ -160,6 +160,9 @@ input:focus,select:focus{border-color:var(--accent);outline:none}
 .qtile{display:grid;place-items:center;width:64px;height:64px;border:2.5px dashed var(--accent);border-radius:6px;font:600 1.6rem var(--f-display);color:var(--accent)}
 .tile{display:block;max-width:100%;height:auto}
 .sv-arrowhead{fill:var(--accent)} .sv-dot{fill:var(--bad)} .sv-cell{fill:var(--card);stroke:var(--line);stroke-width:1.5} .sv-net{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.pyr{display:flex;flex-direction:column;align-items:center;gap:4px}.pyr>div{display:flex;gap:4px}
+.pb{display:grid;place-items:center;min-width:52px;height:40px;padding:0 6px;border:2px solid var(--accent);border-radius:6px;background:var(--card);font:600 1.1rem var(--f-display);font-variant-numeric:tabular-nums}.pb.q{background:var(--hi);color:var(--hi-ink);border-color:var(--hi)}
+.rulebox{border:2px solid var(--ink);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-weight:500}
 .working .tile{margin:4px 0} .answer-line span:has(.tile){display:inline-block;vertical-align:middle;padding:4px 8px} .answer-line .tile{display:block;margin:0}
 @media (max-width:720px){.modes{grid-template-columns:1fr}.topics{grid-template-columns:1fr}}
 @media (max-width:480px){.choices{grid-template-columns:1fr}.qcard,.panel{padding:16px}.helpers .primary{margin-left:0;width:100%}.qtext{font-size:1.1rem}.tally span+span{display:none}}
@@ -172,4 +175,5 @@ input:focus,select:focus{border-color:var(--accent);outline:none}
 <script src="gen-reason.js"></script>
 <script src="gen-thinking.js"></script>
 <script src="gen-official.js"></script>
+<script src="gen-official2.js"></script>
 <script src="app.js"></script>
