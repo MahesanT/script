@@ -60,7 +60,8 @@ function tick(){
 function fxEl(cls,html,ms){FX.init();const d=document.createElement('div');d.className=cls;d.innerHTML=html;FX.layer.appendChild(d);setTimeout(()=>d.remove(),ms);return d;}
 function mascot(text,extra,big){
   FX.layer&&FX.layer.querySelectorAll('.koala').forEach(k=>k.remove());
-  fxEl(`koala${big?' big':''}`,`<div class="bubble">${text}</div>${koalaSVG(extra)}`,2900);
+  const prop=extra===HAT&&wearsSlot('head')?'':extra===SHADES&&wearsSlot('eyes')?'':(extra||'');
+  fxEl(`koala${big?' big':''}`,`<div class="bubble">${text}</div>${koalaSVG(wornSVG()+prop)}`,2900);
 }
 function kangaroo(){fxEl('roo',`<div class="roo-in">${kangarooSVG()}</div>`,3200);}
 function burst(el){if(!el)return;const r=el.getBoundingClientRect();
@@ -69,8 +70,25 @@ function burst(el){if(!el)return;const r=el.getBoundingClientRect();
 function floatText(el,text){if(!el)return;const r=el.getBoundingClientRect(),d=fxEl('floaty',text,900);d.style.left=(r.left+r.width/2)+'px';d.style.top=r.top+'px';}
 function banner(text){fxEl('fx-banner',text,2200);}
 
+// Stars fly from the answer to the header counter, which bumps when they land.
+function flyStars(el,n){
+  const tgt=document.querySelector('.tally .starcount');if(!el||!tgt||FX.calm())return;
+  const a=el.getBoundingClientRect(),b=tgt.getBoundingClientRect();
+  for(let i=0;i<n;i++){const d=fxEl('flystar','<svg viewBox="-10 -10 20 20" width="22" height="22"><path d="M0-9L2.6-2.8 9-2.8 3.9 1.1 5.6 7.5 0 3.8-5.6 7.5-3.9 1.1-9-2.8-2.6-2.8Z" fill="#FFD43B" stroke="#E5A800" stroke-width=".8"/></svg>',1300);
+    d.style.left=(a.left+a.width*.3+i*18)+'px';d.style.top=(a.top+a.height/2)+'px';d.style.setProperty('--tx',(b.left+b.width/2-(a.left+a.width*.3+i*18))+'px');d.style.setProperty('--ty',(b.top+b.height/2-(a.top+a.height/2))+'px');d.style.animationDelay=(i*.12)+'s';}
+  setTimeout(()=>{tgt.classList.remove('bump');void tgt.offsetWidth;tgt.classList.add('bump');chime([1318],.05,'sine',.06);},900+n*120);
+}
+// A wrong answer gets a gentle wobble and a soft "boop", never a harsh buzzer.
+function oops(el){if(!FX.on())return;if(el&&!FX.calm()){el.classList.add('shake');setTimeout(()=>el.classList.remove('shake'),500);}chime([330,262],.09,'sine',.07);}
+function tap(){if(FX.on())chime([740],.03,'sine',.04);}
+// Several rewards at once (a level-up, a badge and the daily goal) play one after another.
+const FXQ=[];let fxBusy=false;
+function celebrateAll(list,el){if(!list.length)return;for(let i=FXQ.length-1;i>=0;i--)if(FXQ[i].kind==='correct'||FXQ[i].kind==='after')FXQ.splice(i,1);FXQ.push(...list.map(e=>({...e,el})));if(!fxBusy)nextFx();}
+function nextFx(){const e=FXQ.shift();if(!e){fxBusy=false;return;}fxBusy=true;celebrate(e.kind,e.el,e.data);setTimeout(nextFx,e.kind==='correct'||e.kind==='after'?1600:3000);}
+function badgeCard(b){fxEl('badge-pop',`<div class="badge-in">${medalSVG(b.col,b.glyph,110)}<p>Badge unlocked!</p><b>${b.name}</b></div>`,2900);}
+
 // ---------- entry points ----------
-function celebrate(kind,el){
+function celebrate(kind,el,data){
   if(!FX.on())return;
   if(FX.calm()){banner(kind==='after'?pick(AFTER):kind==='levelup'?pick(LEVELUP):'Correct!');return;}
   const r=el?el.getBoundingClientRect():{left:innerWidth/2,top:innerHeight/2,width:0,height:0},x=r.left+r.width/2,y=r.top+r.height/2;
@@ -81,6 +99,10 @@ function celebrate(kind,el){
   if(kind==='test'){confetti(innerWidth*.3,innerHeight*.8,120);confetti(innerWidth*.7,innerHeight*.8,120);mascot('What a test result! You should be SO proud!',HAT,true);kangaroo();chime([523,659,784,1046,784,1046,1318],.12);return;}
   if(kind==='round'){confetti(innerWidth*.3,innerHeight*.8,100);confetti(innerWidth*.7,innerHeight*.8,100);mascot('Round complete! Brilliant work!',HAT,true);chime([523,659,784,1046],.1);return;}
   if(kind==='best'){confetti(x,y,120,1.2);banner('NEW BEST!');mascot('New best score! Your fingers are on fire!',SHADES,true);chime([523,659,784,1046,1318],.09);return;}
+  if(kind==='goal'){confetti(innerWidth*.2,innerHeight*.9,90);confetti(innerWidth*.8,innerHeight*.9,90);banner('DAILY GOAL!');mascot('Daily goal smashed! Here are 10 bonus stars!',HAT,true);chime([523,659,784,1046,1318,1046,1318],.1);return;}
+  if(kind==='tier'){confetti(innerWidth/2,innerHeight*.9,160,1.4);fxEl('badge-pop',`<div class="badge-in">${medalSVG(data.col,data.name[0],120)}<p>New tier!</p><b>${data.name}</b></div>`,2900);chime([392,523,659,784,1046],.14,'square',.06);return;}
+  if(kind==='badge'){confetti(innerWidth/2,innerHeight*.45,90,1.6);badgeCard(data);chime([784,988,1175,1568],.1);return;}
+  if(kind==='buy'){confetti(x,y,80);mascot(pick(['Ooh, fancy! Thank you!','I look AMAZING.','Best. Outfit. Ever.','Do I look clever in this?']),'',true);chime([659,784,988,1318],.08);return;}
   // plain first-try correct: confetti + stars, and sometimes the koala or a hopping kangaroo
   confetti(x,y,70);burst(el);chime([659,880],.09);
   const roll=Math.random();if(roll<.45)mascot(pick(JOKES));else if(roll<.62)kangaroo();

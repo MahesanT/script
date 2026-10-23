@@ -1,13 +1,18 @@
 // App: profile, practice sessions with locked help, OC mock test, times-table sprint, parent corner.
 const KEY='ocmaths.v1';
-function defaults(){return{name:'',stars:0,topics:{},tests:[],sprintBest:0,readSeen:{},settings:{hintAfter:1,solveAfter:2,fx:1,sound:true},day:{last:'',streak:0},daily:''};}
+function defaults(){return{name:'',stars:0,earned:0,topics:{},tests:[],sprintBest:0,readSeen:{},settings:{hintAfter:1,solveAfter:2,fx:1,sound:true,goal:20},day:{last:'',streak:0,best:0},daily:'',log:{},badges:{},owned:[],wear:[],goalDays:0,perfect:0,bestRun:0,updatedAt:0};}
+// Fill in any fields an older save is missing, so progress from earlier versions carries over.
+function normaliseP(s){const d=defaults(),p=Object.assign(d,s||{});p.settings=Object.assign(defaults().settings,(s&&s.settings)||{});p.day=Object.assign(defaults().day,(s&&s.day)||{});
+  for(const k of['readSeen','log','badges'])p[k]=(s&&s[k])||{};for(const k of['owned','wear','tests'])p[k]=Array.isArray(s&&s[k])?s[k]:[];
+  if(!(s&&s.earned))p.earned=Math.max(p.earned||0,p.stars||0);if(p.day.best<p.day.streak)p.day.best=p.day.streak;return p;}
 let P=defaults();
-try{const s=JSON.parse(localStorage.getItem(KEY));if(s)P=Object.assign(defaults(),s,{readSeen:s.readSeen||{}},{settings:Object.assign(defaults().settings,s.settings||{})});}catch(e){}
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(P));}catch(e){}};
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s)P=normaliseP(s);}catch(e){}
+const saveLocal=()=>{try{localStorage.setItem(KEY,JSON.stringify(P));}catch(e){}};
+const save=()=>{P.updatedAt=Date.now();saveLocal();cloudSave();};
 const tstat=id=>P.topics[id]||(P.topics[id]={level:1,att:0,first:0,streak:0,miss:0});
 const LEVELS=['','Level 1 · Starter','Level 2 · Building','Level 3 · Exam ready'];
 const today=()=>new Date().toLocaleDateString('en-CA');
-function markDay(){const t=today();if(P.day.last===t)return;const y=new Date(Date.now()-864e5).toLocaleDateString('en-CA');P.day.streak=P.day.last===y?P.day.streak+1:1;P.day.last=t;}
+function markDay(){const t=today();if(P.day.last===t)return;const y=new Date(Date.now()-864e5).toLocaleDateString('en-CA');P.day.streak=P.day.last===y?P.day.streak+1:1;P.day.last=t;P.day.best=Math.max(P.day.best||0,P.day.streak);}
 const acc=s=>s.att?Math.round(100*s.first/s.att):null;
 const oneCol=q=>q.choices.some(c=>c.length>40&&!c.includes('<svg'));
 const mmss=s=>`${Math.floor(s/60)}:${pad(Math.floor(s%60))}`;
@@ -23,23 +28,25 @@ function vHeader(){
   const inTest=S.screen==='test';
   return`<header class="top"><div class="top-in">
     <button class="brand" data-act="${inTest?'':'home'}" ${inTest?'disabled':''}><span class="mark">÷</span>OC Maths Coach</button>
-    <div class="tally"><span title="Stars earned"><b>★ ${P.stars}</b></span><span title="Days in a row">${P.day.streak||0}-day streak</span><button class="soundbtn" data-act="sound" aria-pressed="${P.settings.sound!==false}">${P.settings.sound===false?'Sound off':'Sound on'}</button></div>
+    <div class="tally"><span title="Stars to spend"><b class="starcount">★ ${P.stars}</b></span><span title="Days in a row">${P.day.streak||0}-day streak</span><button class="soundbtn" data-act="sound" aria-pressed="${P.settings.sound!==false}">${P.settings.sound===false?'Sound off':'Sound on'}</button></div>
   </div></header>`;
 }
 function vHome(){
   const doneToday=P.daily===today();
   const tile=t=>{const s=tstat(t.id),a=acc(s);
     return`<button class="topic" data-act="topic" data-arg="${t.id}"><span class="glyph tone-${t.tone}">${t.glyph}</span>
-      <span class="tinfo"><span class="tname">${t.name}</span><span class="tmeta">${t.strand==='Reading'?`${READING.length} texts to practise`:`${t.strand} · Level ${s.level}`}</span>
+      <span class="tinfo"><span class="tname">${t.name}${topicMedal(t)?`<span class="tile-medal" title="${topicMedal(t)} medal">${medalSVG(MEDAL_COL[topicMedal(t)],'★',22)}</span>`:''}</span><span class="tmeta">${t.strand==='Reading'?`${READING.length} texts to practise`:`${t.strand} · Level ${s.level}`}</span>
       <span class="meter" aria-label="Level ${s.level} of 3"><i style="width:${t.strand==='Reading'?(a??0):Math.round(((s.level-1)/2*70)+(a??0)*.3)}%"></i></span>
       <span class="tmeta">${a===null?'Not started':`${a}% first try · ${s.att} done`}</span></span></button>`;};
   const bestOf=type=>{const ts=P.tests.filter(t=>(t.type||'maths')===type);return ts.length?Math.max(...ts.map(t=>t.score)):null;},best=bestOf('maths'),bestT=bestOf('think'),bestR=bestOf('read');
   return`<section class="hero">
+    <button class="hero-koala" data-act="poke" aria-label="Say hello to the koala">${koalaSVG(wornSVG())}</button>
     <div class="hello"><p class="eyebrow">NSW Stage 2 maths · OC test practice</p>
       <h1>${P.name?`Hi ${esc(P.name)}!`:'Hi there!'} Ready to train?</h1>
       ${P.name?'':`<form class="nameform" id="nameform"><label for="nm">What's your name?</label><input id="nm" maxlength="20" autocomplete="off"><button class="btn primary sm">Save</button></form>`}
       <p class="lede">Pick a mode. Try every question yourself first. If you get stuck, a hint unlocks, and then the full working.</p></div>
   </section>
+  ${vProgressCard()}
   <section class="modes">
     <button class="mode m-daily" data-act="daily"><span class="mtag">${doneToday?'Done today ✓':'10 questions'}</span><span class="mtitle">Daily 10</span><span class="mdesc">A mix of topics, with extra practice on the ones you find hardest.</span></button>
     <button class="mode m-test" data-act="test" data-arg="maths"><span class="mtag">35 questions · 40 min</span><span class="mtitle">Maths mock test</span><span class="mdesc">Same format as the Mathematical Reasoning paper. No help until you finish.${best!==null?` Best so far: <b>${best}/35</b>.`:''}</span></button>
@@ -76,8 +83,8 @@ function vQuestion(){
     !S.done&&S.tries<st.hintAfter?`<span class="locked">Help unlocks if you get stuck.</span>`:''].join('');
   return`<div class="qtop"><button class="link" data-act="home">← Home</button>
     <div class="prog"><span>${S.label} · Question ${S.i+1} of ${S.n}</span><div class="bar"><i style="width:${(S.i/S.n)*100}%"></i></div></div></div>
-  <article class="qcard">
-    <div class="qmeta"><span class="chip tone-${t.tone}">${t.name}</span><span class="lvl">${LEVELS[q.level]}</span></div>
+  <article class="qcard${S.anim?' enter':''}">
+    <div class="qmeta"><span class="chip tone-${t.tone}">${t.name}</span><span class="lvl">${LEVELS[q.level]}</span>${S.run>=2?`<span class="combo">${flameSVG()} ${S.run} in a row</span>`:''}</div>
     ${q.passage?`<div class="passage" tabindex="0">${q.passage}</div>`:''}<div class="qtext">${q.text}</div>${q.visual?`<div class="visual">${q.visual}</div>`:''}
     <div class="choices${oneCol(q)?' one':''}">${ch}</div>
     <div class="feedback ${fc}" role="status">${fb}</div>
@@ -150,20 +157,21 @@ function vParent(){
   <section class="panel"><h2 class="sec">Help settings</h2>
     <div class="setting"><label for="hintAfter">Hint unlocks after</label>${sel('hintAfter',P.settings.hintAfter,[[1,'1 wrong try'],[2,'2 wrong tries']])}</div>
     <div class="setting"><label for="solveAfter">Full working and answer unlock after</label>${sel('solveAfter',P.settings.solveAfter,[[1,'1 wrong try'],[2,'2 wrong tries'],[3,'3 wrong tries']])}</div>
+    <div class="setting"><label for="goal">Daily goal</label>${sel('goal',P.settings.goal||20,[[10,'10 questions'],[20,'20 questions'],[30,'30 questions'],[40,'40 questions']])}</div>
     <div class="setting"><label for="fx">Celebration animations</label>${sel('fx',P.settings.fx??1,[[1,'On'],[0,'Off']])}</div>
     <div class="setting"><label for="pname">Name</label><input id="pname" data-set="name" value="${esc(P.name)}" maxlength="20"></div>
-    <p class="lede sm">Levels adjust on their own: 3 right first try in a row moves a topic up; needing the working twice moves it down. Progress is saved in this browser on this device.</p>
+    <p class="lede sm">Levels adjust on their own: 3 right first try in a row moves a topic up; needing the working twice moves it down. ${SYNC.state==='cloud'?'<b>Progress is saved to your Claude account</b>, so refreshing the page, clearing the browser or switching devices keeps it, as long as you are signed in to the same Claude account.':'Progress is currently saved in this browser only. Open the page while signed in to Claude to save it to your account.'}</p>
     ${S.resetAsk?`<div class="confirm"><p>Delete all stars, levels and test history?</p><div class="row"><button class="btn danger" data-act="resetYes">Yes, reset</button><button class="btn ghost" data-act="resetNo">Cancel</button></div></div>`:`<div class="row"><button class="btn ghost" data-act="resetAsk">Reset all progress</button></div>`}</section>
   <section class="panel"><h2 class="sec">What's covered</h2><p class="lede sm">Questions follow the NSW Mathematics K–10 syllabus for Stage 2 (Years 3–4), stretching into early Stage 3 on Level 3: whole numbers to 6 digits, addition and subtraction, multiplication and division, fractions and decimals, patterns and algebra, length, area, volume, mass and capacity, time, money, 2D and 3D shapes, angles, position, data and chance. The Thinking Skills section covers the OC Thinking Skills paper (30 questions in 30 minutes): ordering and seating puzzles, "must be true" logic, truth-teller puzzles, cube nets, turning and flipping shapes, picture patterns, codes, counting and balance puzzles, and judging arguments (flaws, assumptions, what strengthens or weakens a claim). The Reading section has three full papers of original texts in the official five-part layout (story questions, choosing the right word, a poem, missing sentences and matching extracts: 33 answers in 40 minutes). The OC problem-solving topic and the maths mock test practise the multi-step reasoning style of the NSW Opportunity Class placement test (Mathematical Reasoning: 35 questions in 40 minutes). Formats follow the department's published practice tests: maths questions have five options (A–E), Thinking Skills questions have four. Question styles such as multi-step bus problems, views of cube models, pet and timetable deductions, and "which statement, if true, best supports" arguments are modelled on those samples, but every question is the app's own and is generated fresh, so she will not see the same paper twice.</p></section>`;
 }
 
 // ---------- flow ----------
 function render(){
-  const v={home:vHome,q:vQuestion,summary:vSummary,test:vTest,result:vResult,sprint:vSprint,parent:vParent}[S.screen]();
-  app.innerHTML=vHeader()+`<main class="wrap">${v}</main>`;
+  const v={home:vHome,q:vQuestion,summary:vSummary,test:vTest,result:vResult,sprint:vSprint,parent:vParent,trophies:vTrophies,shop:vShop}[S.screen]();
+  app.innerHTML=vHeader()+`<main class="wrap">${v}</main>`;S.anim=false;
   const g=app.querySelector('.passage .gap.cur');if(g){const box=g.closest('.passage');box.scrollTop=Math.max(0,g.offsetTop-80);}
 }
-function go(screen,extra){clearInterval(timer);timer=null;S=Object.assign({screen},extra||{});render();window.scrollTo(0,0);}
+function go(screen,extra){clearInterval(timer);timer=null;for(let i=FXQ.length-1;i>=0;i--)if(!['badge','goal','tier'].includes(FXQ[i].kind))FXQ.splice(i,1);S=Object.assign({screen},extra||{});render();window.scrollTo(0,0);}
 function weakPlan(n,list){
   const w=list.map(t=>{const s=tstat(t.id),a=acc(s);return{id:t.id,w:1+(a===null?.6:(100-a)/50)+(t.id==='reason'?.5:0)};});
   const plan=[];while(plan.length<n){let r=Math.random()*w.reduce((x,y)=>x+y.w,0);const c=w.find(x=>(r-=x.w)<=0)||w[0];if(plan.filter(p=>p===c.id).length<2)plan.push(c.id);}
@@ -179,16 +187,16 @@ function startSession(kind,arg){
 }
 function nextQ(first){
   if(!first)S.i++;
-  if(S.i>=S.n){if(S.kind==='daily'){P.daily=today();save();}S.screen='summary';render();window.scrollTo(0,0);if(S.results.filter(r=>r.first).length>=Math.ceil(S.n*.7))setTimeout(()=>celebrate('round'),300);return;}
+  if(S.i>=S.n){if(S.kind==='daily'){P.daily=today();save();}S.screen='summary';const fr=S.results.filter(r=>r.first).length;if(S.n>=10&&fr===S.n)P.perfect=(P.perfect||0)+1;const ev=checkBadges();save();render();window.scrollTo(0,0);setTimeout(()=>celebrateAll([...(fr>=Math.ceil(S.n*.7)?[{kind:'round'}]:[]),...ev]),300);return;}
   let q;if(S.kind==='list')q={...S.list[S.i]};else if(S.kind==='redo'&&S.list[S.i].q&&TOPIC[S.list[S.i].topic].strand==='Reading')q={...S.list[S.i].q};else if(S.kind==='redo'){const o=S.list[S.i];q=makeQ(o.topic,o.level,null);if(o.gen){for(let k=0;k<20&&q.gen!==o.gen;k++)q=makeQ(o.topic,o.level,null);}}
   else{const tid=S.kind==='topic'?S.arg:S.plan[S.i];q=makeQ(tid,tstat(tid).level,S.q&&S.q.gen);}
-  Object.assign(S,{q,tries:0,wrong:[],hint:false,revealed:false,done:false,work:false});render();window.scrollTo(0,0);
+  Object.assign(S,{q,tries:0,wrong:[],hint:false,revealed:false,done:false,work:false,anim:true});render();window.scrollTo(0,0);
 }
-function record(first,revealed){
-  const s=tstat(S.q.topic);s.att++;markDay();
+function record(first,revealed,stars=0){
+  const s=tstat(S.q.topic);s.att++;markDay();const ev=rewardAnswer(first,stars);
   if(first){s.first++;s.streak++;s.miss=0;if(s.streak>=3&&s.level<3){s.level++;s.streak=0;if(!S.levelUps.includes(S.q.topic))S.levelUps.push(S.q.topic);}}
   else{s.streak=0;if(revealed){s.miss++;if(s.miss>=2&&s.level>1){s.level--;s.miss=0;}}}
-  S.results.push({topic:S.q.topic,level:S.q.level,gen:S.q.gen,q:S.q,first,revealed});save();
+  S.results.push({topic:S.q.topic,level:S.q.level,gen:S.q.gen,q:S.q,first,revealed});ev.push(...checkBadges());save();return ev;
 }
 const ACT={
   home:()=>go('home'),parent:()=>go('parent'),
@@ -196,11 +204,13 @@ const ACT={
   again:()=>startSession(S.kind==='redo'?'daily':S.kind==='list'?'topic':S.kind,S.arg),
   redoShown:()=>startSession('redo',S.results.filter(r=>r.revealed)),
   choose:i=>{i=+i;if(S.done||S.wrong.includes(i))return;
-    if(i===S.q.answer){const lu=S.levelUps.length,first=S.tries===0;S.done=true;S.earned=first?3:S.tries===1?2:1;P.stars+=S.earned;S.starsEarned+=S.earned;S.praise=pick(PRAISE);record(first,false);
-      S.run=first?(S.run||0)+1:0;render();celebrate(S.levelUps.length>lu?'levelup':!first?'after':S.run%5===0?'streak5':S.run===3?'streak3':'correct',app.querySelector('.choice.is-right'));return;}
-    else{S.wrong.push(i);S.tries++;}render();},
+    if(i===S.q.answer){const lu=S.levelUps.length,first=S.tries===0;S.done=true;S.earned=first?3:S.tries===1?2:1;P.stars+=S.earned;S.starsEarned+=S.earned;S.praise=pick(PRAISE);
+      S.run=first?(S.run||0)+1:0;P.bestRun=Math.max(P.bestRun||0,S.run);const ev=record(first,false,S.earned);render();
+      const el=app.querySelector('.choice.is-right'),main=S.levelUps.length>lu?'levelup':!first?'after':S.run%5===0?'streak5':S.run===3?'streak3':'correct';
+      flyStars(el,S.earned);celebrateAll([{kind:main},...ev],el);return;}
+    else{S.wrong.push(i);S.tries++;S.run=0;}render();oops(app.querySelector(`.choice[data-arg="${i}"]`));},
   hint:()=>{S.hint=true;render();},
-  solve:()=>{S.revealed=true;S.done=true;S.run=0;record(false,true);render();},
+  solve:()=>{S.revealed=true;S.done=true;S.run=0;const ev=record(false,true);render();celebrateAll(ev.filter(e=>e.kind!=='correct'));},
   work:()=>{S.work=true;render();},
   next:()=>nextQ(),
   test:type=>{type=type==='think'||type==='read'?type:'maths';const plan=type==='read'?null:type==='think'?shuffle([...Array(8).fill('logic'),...Array(8).fill('spatial'),...Array(7).fill('puzzle'),...Array(7).fill('critical')])
@@ -208,27 +218,31 @@ const ACT={
     const qs=type==='read'?pickPaper():[];if(plan)plan.forEach(tid=>{let q,k=0;do{q=makeQ(tid,Math.random()<.6?2:3);}while(k++<8&&qs.some(o=>o.text===q.text));qs.push(q);});
     const mins=type==='think'?30:40;go('test',{testType:type,qs,ans:Array(qs.length).fill(null),flag:Array(qs.length).fill(false),i:0,start:Date.now(),end:Date.now()+mins*60*1000,limit:mins*60,confirm:false});
     timer=setInterval(()=>{const left=(S.end-Date.now())/1000,el=document.getElementById('timer');if(left<=0)return ACT.tFinish();if(el){el.textContent=mmss(left);el.classList.toggle('low',left<300);}},1000);},
-  tPick:i=>{S.ans[S.i]=+i;render();},
+  tPick:i=>{S.ans[S.i]=+i;render();tap();},
   tGo:i=>{S.i=+i;render();},tPrev:()=>{if(S.i>0){S.i--;render();}},
   tNext:()=>{if(S.i<S.qs.length-1){S.i++;render();window.scrollTo(0,0);}else{S.confirm=true;render();}},
   tFlag:()=>{S.flag[S.i]=!S.flag[S.i];render();},tAsk:()=>{S.confirm=true;render();},tCancel:()=>{S.confirm=false;render();},
   tFinish:()=>{clearInterval(timer);timer=null;const secs=Math.min(S.limit,Math.round((Date.now()-S.start)/1000)),score=S.qs.filter((q,i)=>S.ans[i]===q.answer).length;
-    P.tests.push({date:new Date().toLocaleDateString('en-AU'),score,total:S.qs.length,secs,type:S.testType});P.tests=P.tests.slice(-20);markDay();save();
-    S.screen='result';S.res={score,total:S.qs.length,secs};S.open=null;S.solved={};render();window.scrollTo(0,0);if(score/S.qs.length>=.7)setTimeout(()=>celebrate('test'),300);},
+    P.tests.push({date:new Date().toLocaleDateString('en-AU'),score,total:S.qs.length,secs,type:S.testType});P.tests=P.tests.slice(-20);markDay();const tev=checkBadges();save();
+    S.screen='result';S.res={score,total:S.qs.length,secs};S.open=null;S.solved={};render();window.scrollTo(0,0);setTimeout(()=>celebrateAll([...(score/S.qs.length>=.7?[{kind:'test'}]:[]),...tev]),300);},
   rToggle:i=>{S.open=S.open===+i?null:+i;render();},rSolve:i=>{S.solved[+i]=true;render();},
   redoTest:()=>startSession('redo',S.qs.filter((q,i)=>S.ans[i]!==q.answer).map(q=>({topic:q.topic,level:q.level,gen:q.gen,q}))),
   sprint:()=>go('sprint',{sp:{phase:'setup',tables:(S.sp&&S.sp.tables)||[2,3,4,5,6,7,8,9,10,11,12]}}),
   spToggle:n=>{n=+n;const t=S.sp.tables;S.sp.tables=t.includes(n)?t.filter(x=>x!==n):[...t,n].sort((a,b)=>a-b);render();},
   spStart:()=>{clearInterval(timer);Object.assign(S.sp,{phase:'run',score:0,wrongs:[],input:'',flash:false,end:Date.now()+60000});spNew();render();
     timer=setInterval(()=>{const left=(S.sp.end-Date.now())/1000,el=document.getElementById('timer');
-      if(left<=0){clearInterval(timer);timer=null;S.sp.phase='done';S.sp.newBest=S.sp.score>P.sprintBest;if(S.sp.newBest)P.sprintBest=S.sp.score;markDay();save();render();if(S.sp.newBest&&S.sp.score>0)celebrate('best',document.querySelector('.panel h1'));return;}
+      if(left<=0){clearInterval(timer);timer=null;S.sp.phase='done';S.sp.newBest=S.sp.score>P.sprintBest;if(S.sp.newBest)P.sprintBest=S.sp.score;markDay();const sev=checkBadges();save();render();celebrateAll([...(S.sp.newBest&&S.sp.score>0?[{kind:'best'}]:[]),...sev],document.querySelector('.panel h1'));return;}
       if(el){el.textContent=mmss(left);el.classList.toggle('low',left<10);}},250);},
   spKey:k=>{const sp=S.sp;if(sp.phase!=='run'||sp.flash)return;
     if(k==='⌫')sp.input=sp.input.slice(0,-1);else if(k==='✓'){if(sp.input)spCheck(true);return;}else if(sp.input.length<3)sp.input+=k;
     spCheck(false);render();},
   sound:()=>{P.settings.sound=P.settings.sound===false;save();render();if(P.settings.sound)chime([659,880],.08);},
+  trophies:()=>go('trophies'),shop:()=>go('shop'),
+  buy:id=>{const it=ITEM[id];if(!it||P.owned.includes(id)||P.stars<it.cost)return;P.stars-=it.cost;P.owned.push(id);ACT.wear(id,true);celebrate('buy',app.querySelector(`[data-arg="${id}"]`));},
+  wear:(id,keep)=>{const it=ITEM[id];if(!it||!P.owned.includes(id))return;const on=P.wear.includes(id);P.wear=P.wear.filter(w=>ITEM[w]&&ITEM[w].slot!==it.slot);if(!on||keep)P.wear.push(id);save();render();},
+  poke:()=>{celebrate('correct',app.querySelector('.hero-koala'));},
   resetAsk:()=>{S.resetAsk=true;render();},resetNo:()=>{S.resetAsk=false;render();},
-  resetYes:()=>{const name=P.name;P=defaults();P.name=name;save();go('parent');},
+  resetYes:()=>{const name=P.name;P=defaults();P.name=name;save();flushCloud();go('parent');},
 };
 function spNew(){const sp=S.sp;let a,b;do{a=pick(sp.tables);b=R(2,12);}while(sp.a===a&&sp.b===b);sp.a=a;sp.b=b;sp.input='';}
 function spCheck(force){const sp=S.sp,ans=sp.a*sp.b;
@@ -247,3 +261,4 @@ document.addEventListener('keydown',e=>{
   else if(S.screen==='sprint'&&S.sp.phase==='run'){if(/^[0-9]$/.test(e.key))ACT.spKey(e.key);else if(e.key==='Backspace')ACT.spKey('⌫');else if(e.key==='Enter')ACT.spKey('✓');}
 });
 render();
+initSync();
