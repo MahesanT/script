@@ -90,6 +90,7 @@ function badgeCard(b){fxEl('badge-pop',`<div class="badge-in">${medalSVG(b.col,b
 // ---------- entry points ----------
 function celebrate(kind,el,data){
   if(!FX.on())return;
+  cheer(kind,data);
   if(FX.calm()){banner(kind==='after'?pick(AFTER):kind==='levelup'?pick(LEVELUP):'Correct!');return;}
   const r=el?el.getBoundingClientRect():{left:innerWidth/2,top:innerHeight/2,width:0,height:0},x=r.left+r.width/2,y=r.top+r.height/2;
   if(kind==='after'){burst(el);mascot(pick(AFTER));chime([523,659],.1);return;}

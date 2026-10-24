@@ -1,6 +1,6 @@
 // App: profile, practice sessions with locked help, OC mock test, times-table sprint, parent corner.
 const KEY='ocmaths.v1';
-function defaults(){return{name:'',stars:0,earned:0,topics:{},tests:[],sprintBest:0,readSeen:{},settings:{hintAfter:1,solveAfter:2,fx:1,sound:true,goal:20},day:{last:'',streak:0,best:0},daily:'',log:{},badges:{},owned:[],wear:[],goalDays:0,perfect:0,bestRun:0,updatedAt:0};}
+function defaults(){return{name:'',stars:0,earned:0,topics:{},tests:[],sprintBest:0,readSeen:{},settings:{hintAfter:1,solveAfter:2,fx:1,sound:true,goal:20,voice:1},day:{last:'',streak:0,best:0},daily:'',log:{},badges:{},owned:[],wear:[],goalDays:0,perfect:0,bestRun:0,updatedAt:0};}
 // Fill in any fields an older save is missing, so progress from earlier versions carries over.
 function normaliseP(s){const d=defaults(),p=Object.assign(d,s||{});p.settings=Object.assign(defaults().settings,(s&&s.settings)||{});p.day=Object.assign(defaults().day,(s&&s.day)||{});
   for(const k of['readSeen','log','badges'])p[k]=(s&&s[k])||{};for(const k of['owned','wear','tests'])p[k]=Array.isArray(s&&s[k])?s[k]:[];
@@ -159,6 +159,7 @@ function vParent(){
     <div class="setting"><label for="solveAfter">Full working and answer unlock after</label>${sel('solveAfter',P.settings.solveAfter,[[1,'1 wrong try'],[2,'2 wrong tries'],[3,'3 wrong tries']])}</div>
     <div class="setting"><label for="goal">Daily goal</label>${sel('goal',P.settings.goal||20,[[10,'10 questions'],[20,'20 questions'],[30,'30 questions'],[40,'40 questions']])}</div>
     <div class="setting"><label for="fx">Celebration animations</label>${sel('fx',P.settings.fx??1,[[1,'On'],[0,'Off']])}</div>
+    <div class="setting"><label for="voice">Cheering voices${VOICE.ok?'':' (not supported on this device)'}</label><span class="row tight">${sel('voice',P.settings.voice??1,[[1,'On'],[0,'Off']])}<button class="btn ghost sm" data-act="testCheer">Play a sample</button></span></div>
     <div class="setting"><label for="pname">Name</label><input id="pname" data-set="name" value="${esc(P.name)}" maxlength="20"></div>
     <p class="lede sm">Levels adjust on their own: 3 right first try in a row moves a topic up; needing the working twice moves it down. ${SYNC.state==='cloud'?'<b>Progress is saved to your Claude account</b>, so refreshing the page, clearing the browser or switching devices keeps it, as long as you are signed in to the same Claude account.':'Progress is currently saved in this browser only. Open the page while signed in to Claude to save it to your account.'}</p>
     ${S.resetAsk?`<div class="confirm"><p>Delete all stars, levels and test history?</p><div class="row"><button class="btn danger" data-act="resetYes">Yes, reset</button><button class="btn ghost" data-act="resetNo">Cancel</button></div></div>`:`<div class="row"><button class="btn ghost" data-act="resetAsk">Reset all progress</button></div>`}</section>
@@ -236,11 +237,12 @@ const ACT={
   spKey:k=>{const sp=S.sp;if(sp.phase!=='run'||sp.flash)return;
     if(k==='⌫')sp.input=sp.input.slice(0,-1);else if(k==='✓'){if(sp.input)spCheck(true);return;}else if(sp.input.length<3)sp.input+=k;
     spCheck(false);render();},
-  sound:()=>{P.settings.sound=P.settings.sound===false;save();render();if(P.settings.sound)chime([659,880],.08);},
+  sound:()=>{P.settings.sound=P.settings.sound===false;save();render();if(P.settings.sound){chime([659,880],.08);claps(2,.18,.4);}else try{speechSynthesis.cancel();}catch(e){}},
   trophies:()=>go('trophies'),shop:()=>go('shop'),
   buy:id=>{const it=ITEM[id];if(!it||P.owned.includes(id)||P.stars<it.cost)return;P.stars-=it.cost;P.owned.push(id);ACT.wear(id,true);celebrate('buy',app.querySelector(`[data-arg="${id}"]`));},
   wear:(id,keep)=>{const it=ITEM[id];if(!it||!P.owned.includes(id))return;const on=P.wear.includes(id);P.wear=P.wear.filter(w=>ITEM[w]&&ITEM[w].slot!==it.slot);if(!on||keep)P.wear.push(id);save();render();},
   poke:()=>{celebrate('correct',app.querySelector('.hero-koala'));},
+  testCheer:()=>{const was=P.settings.fx;P.settings.fx=1;cheer('badge',{name:'Super Listener'});P.settings.fx=was;},
   resetAsk:()=>{S.resetAsk=true;render();},resetNo:()=>{S.resetAsk=false;render();},
   resetYes:()=>{const name=P.name;P=defaults();P.name=name;save();flushCloud();go('parent');},
 };
