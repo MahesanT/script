@@ -1,10 +1,10 @@
 // App: profile, practice sessions with locked help, OC mock test, times-table sprint, parent corner.
 const KEY='ocmaths.v1';
-function defaults(){return{name:'',stars:0,earned:0,topics:{},tests:[],sprintBest:0,readSeen:{},settings:{hintAfter:1,solveAfter:2,fx:1,sound:true,goal:20,voice:1},day:{last:'',streak:0,best:0},daily:'',log:{},badges:{},owned:[],wear:[],goalDays:0,perfect:0,bestRun:0,updatedAt:0};}
+function defaults(){return{name:'Mithila',stars:0,earned:0,topics:{},tests:[],sprintBest:0,readSeen:{},settings:{hintAfter:1,solveAfter:2,fx:1,sound:true,goal:20,voice:1,sayName:''},day:{last:'',streak:0,best:0},daily:'',log:{},badges:{},owned:[],wear:[],goalDays:0,perfect:0,bestRun:0,updatedAt:0};}
 // Fill in any fields an older save is missing, so progress from earlier versions carries over.
 function normaliseP(s){const d=defaults(),p=Object.assign(d,s||{});p.settings=Object.assign(defaults().settings,(s&&s.settings)||{});p.day=Object.assign(defaults().day,(s&&s.day)||{});
   for(const k of['readSeen','log','badges'])p[k]=(s&&s[k])||{};for(const k of['owned','wear','tests'])p[k]=Array.isArray(s&&s[k])?s[k]:[];
-  if(!(s&&s.earned))p.earned=Math.max(p.earned||0,p.stars||0);if(p.day.best<p.day.streak)p.day.best=p.day.streak;return p;}
+  if(!(s&&s.earned))p.earned=Math.max(p.earned||0,p.stars||0);if(p.day.best<p.day.streak)p.day.best=p.day.streak;if(!p.name)p.name='Mithila';return p;}
 let P=defaults();
 try{const s=JSON.parse(localStorage.getItem(KEY));if(s)P=normaliseP(s);}catch(e){}
 const saveLocal=()=>{try{localStorage.setItem(KEY,JSON.stringify(P));}catch(e){}};
@@ -161,6 +161,7 @@ function vParent(){
     <div class="setting"><label for="fx">Celebration animations</label>${sel('fx',P.settings.fx??1,[[1,'On'],[0,'Off']])}</div>
     <div class="setting"><label for="voice">Cheering voices${VOICE.ok?'':' (not supported on this device)'}</label><span class="row tight">${sel('voice',P.settings.voice??1,[[1,'On'],[0,'Off']])}<button class="btn ghost sm" data-act="testCheer">Play a sample</button></span></div>
     <div class="setting"><label for="pname">Name</label><input id="pname" data-set="name" value="${esc(P.name)}" maxlength="20"></div>
+    <div class="setting"><label for="sayname">How the voice says her name<small class="hintline">If it sounds wrong, try a different spelling, such as "Mi-thi-laa" or "Mithilaa".</small></label><span class="row tight"><input id="sayname" data-set="sayName" value="${esc(P.settings.sayName||'')}" placeholder="${esc(P.name)}" maxlength="30"><button class="btn ghost sm" data-act="hearName">Hear it</button></span></div>
     <p class="lede sm">Levels adjust on their own: 3 right first try in a row moves a topic up; needing the working twice moves it down. ${SYNC.state==='cloud'?'<b>Progress is saved to your Claude account</b>, so refreshing the page, clearing the browser or switching devices keeps it, as long as you are signed in to the same Claude account.':'Progress is currently saved in this browser only. Open the page while signed in to Claude to save it to your account.'}</p>
     ${S.resetAsk?`<div class="confirm"><p>Delete all stars, levels and test history?</p><div class="row"><button class="btn danger" data-act="resetYes">Yes, reset</button><button class="btn ghost" data-act="resetNo">Cancel</button></div></div>`:`<div class="row"><button class="btn ghost" data-act="resetAsk">Reset all progress</button></div>`}</section>
   <section class="panel"><h2 class="sec">What's covered</h2><p class="lede sm">Questions follow the NSW Mathematics K–10 syllabus for Stage 2 (Years 3–4), stretching into early Stage 3 on Level 3: whole numbers to 6 digits, addition and subtraction, multiplication and division, fractions and decimals, patterns and algebra, length, area, volume, mass and capacity, time, money, 2D and 3D shapes, angles, position, data and chance. The Thinking Skills section covers the OC Thinking Skills paper (30 questions in 30 minutes): ordering and seating puzzles, "must be true" logic, truth-teller puzzles, cube nets, turning and flipping shapes, picture patterns, codes, counting and balance puzzles, and judging arguments (flaws, assumptions, what strengthens or weakens a claim). The Reading section has three full papers of original texts in the official five-part layout (story questions, choosing the right word, a poem, missing sentences and matching extracts: 33 answers in 40 minutes). The OC problem-solving topic and the maths mock test practise the multi-step reasoning style of the NSW Opportunity Class placement test (Mathematical Reasoning: 35 questions in 40 minutes). Formats follow the department's published practice tests: maths questions have five options (A–E), Thinking Skills questions have four. Question styles such as multi-step bus problems, views of cube models, pet and timetable deductions, and "which statement, if true, best supports" arguments are modelled on those samples, but every question is the app's own and is generated fresh, so she will not see the same paper twice.</p></section>`;
@@ -242,6 +243,7 @@ const ACT={
   buy:id=>{const it=ITEM[id];if(!it||P.owned.includes(id)||P.stars<it.cost)return;P.stars-=it.cost;P.owned.push(id);ACT.wear(id,true);celebrate('buy',app.querySelector(`[data-arg="${id}"]`));},
   wear:(id,keep)=>{const it=ITEM[id];if(!it||!P.owned.includes(id))return;const on=P.wear.includes(id);P.wear=P.wear.filter(w=>ITEM[w]&&ITEM[w].slot!==it.slot);if(!on||keep)P.wear.push(id);save();render();},
   poke:()=>{celebrate('correct',app.querySelector('.hero-koala'));},
+  hearName:()=>{const inp=document.getElementById('sayname');if(inp){P.settings.sayName=inp.value.trim();save();}say(`Great job, ${spokenName()}! You are a superstar!`);},
   testCheer:()=>{const was=P.settings.fx;P.settings.fx=1;cheer('badge',{name:'Super Listener'});P.settings.fx=was;},
   resetAsk:()=>{S.resetAsk=true;render();},resetNo:()=>{S.resetAsk=false;render();},
   resetYes:()=>{const name=P.name;P=defaults();P.name=name;save();flushCloud();go('parent');},
@@ -254,7 +256,7 @@ function spCheck(force){const sp=S.sp,ans=sp.a*sp.b;
 
 app.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const a=el.dataset.act;if(ACT[a])ACT[a](el.dataset.arg);});
 app.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='nameform'){const v=document.getElementById('nm').value.trim();if(v){P.name=v;save();render();}}});
-app.addEventListener('change',e=>{const k=e.target.dataset.set;if(!k)return;if(k==='name'){P.name=e.target.value.trim();}else P.settings[k]=+e.target.value;save();render();});
+app.addEventListener('change',e=>{const k=e.target.dataset.set;if(!k)return;if(k==='name'){P.name=e.target.value.trim()||'Mithila';}else if(k==='sayName'){P.settings.sayName=e.target.value.trim();}else P.settings[k]=+e.target.value;save();render();});
 document.addEventListener('keydown',e=>{
   if(e.target.matches('input,select,textarea'))return;
   const k=e.key.toLowerCase(),idx='1234567'.indexOf(k)>=0?'1234567'.indexOf(k):'abcdefg'.indexOf(k);

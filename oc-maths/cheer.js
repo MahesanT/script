@@ -45,7 +45,9 @@ function applause(dur=2.2,size='big'){
 }
 
 // ---------- what each moment sounds like ----------
-const nm=()=>P.name?`, ${P.name}`:'';
+// The voice can use a different spelling of her name so it sounds right; the screen always shows P.name.
+const spokenName=()=>(P.settings.sayName||P.name||'Mithila').trim();
+const nm=()=>`, ${spokenName()}`;
 const LINES={
   correct:()=>pick(['Yes!','Awesome!','Great job'+nm()+'!','You got it!','Brilliant!','Woohoo!','Nailed it!','Super!']),
   after:()=>pick(['You got there!','Never give up! Yay!','Well done for trying again!','Yes! You worked it out!']),
