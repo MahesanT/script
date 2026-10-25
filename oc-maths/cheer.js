@@ -1,25 +1,25 @@
-// Cheering: child-pitched voice lines (the device's own speech voices) and synthesised applause.
-// No audio files: the voice comes from speechSynthesis and every clap is filtered noise from Web Audio.
-const VOICE={v:null,ready:false,ok:'speechSynthesis' in window&&'SpeechSynthesisUtterance' in window};
+// Cheering: pre-recorded child-like voice clips (voice/*.mp3, listed in voice/clips.js) and synthesised applause.
+// The clips play through one <audio> element, unlocked on her first tap so iPad lets later clips play on their own.
+const VOICE={ok:true,el:null,unlocked:false};
 const soundOn=()=>P.settings.sound!==false;
-const voiceOn=()=>soundOn()&&(P.settings.voice??1)&&VOICE.ok;
-// Prefer a bright English voice, Australian first; any English voice will do.
-function pickVoice(){
-  if(!VOICE.ok)return;const vs=speechSynthesis.getVoices();if(!vs.length)return;
-  const prefer=['Karen','Catherine','Samantha','Google UK English Female','Microsoft Natasha','Moira','Tessa','Google US English','Serena','Martha'];
-  VOICE.v=prefer.map(n=>vs.find(v=>v.name.includes(n))).find(Boolean)||vs.find(v=>/^en[-_]AU/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang))||null;VOICE.ready=true;
+const voiceOn=()=>soundOn()&&!!(P.settings.voice??1);
+function voiceEl(){if(!VOICE.el){VOICE.el=new Audio();VOICE.el.preload='auto';}return VOICE.el;}
+// Clips that include her name come in two pronunciations; if the name is changed, the no-name version plays instead.
+function clipUrl(c){
+  if(!c.name)return`voice/${c.id}.mp3`;
+  const isMithila=(P.name||'').trim().toLowerCase()==='mithila';
+  return`voice/${c.id}_${isMithila?(P.settings.namePron||'a'):'x'}.mp3`;
 }
-if(VOICE.ok){pickVoice();try{speechSynthesis.addEventListener('voiceschanged',pickVoice);}catch(e){}}
-function say(text,{pitch=1.85,rate=1.08}={}){
-  if(!voiceOn())return;
-  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);if(VOICE.v){u.voice=VOICE.v;u.lang=VOICE.v.lang;}else u.lang='en-AU';u.pitch=pitch;u.rate=rate;u.volume=1;speechSynthesis.speak(u);}catch(e){}
+function playClip(c){
+  if(!voiceOn()||!c)return;
+  try{const el=voiceEl();el.pause();el.muted=false;el.src=clipUrl(c);el.currentTime=0;const pr=el.play();if(pr&&pr.catch)pr.catch(()=>{});}catch(e){}
 }
-// iPad needs the first sound and speech to start inside a tap; this unlocks both on her first touch.
+const clipsFor=kind=>(typeof VCLIPS!=='undefined'&&VCLIPS[kind])||[];
 document.addEventListener('pointerdown',function unlock(){
   try{FX.audio=FX.audio||new (window.AudioContext||window.webkitAudioContext)();if(FX.audio.state==='suspended')FX.audio.resume();}catch(e){}
-  if(VOICE.ok){try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}catch(e){}}
+  try{const el=voiceEl();el.muted=true;el.src='voice/correct_0.mp3';const pr=el.play();if(pr&&pr.then)pr.then(()=>{el.pause();el.muted=false;}).catch(()=>{el.muted=false;});}catch(e){}
   document.removeEventListener('pointerdown',unlock);
-},{once:false});
+});
 
 // ---------- applause ----------
 let NOISE=null;
@@ -45,26 +45,8 @@ function applause(dur=2.2,size='big'){
 }
 
 // ---------- what each moment sounds like ----------
-// The voice can use a different spelling of her name so it sounds right; the screen always shows P.name.
-const spokenName=()=>(P.settings.sayName||P.name||'Mithila').trim();
-const nm=()=>`, ${spokenName()}`;
-const LINES={
-  correct:()=>pick(['Yes!','Awesome!','Great job'+nm()+'!','You got it!','Brilliant!','Woohoo!','Nailed it!','Super!']),
-  after:()=>pick(['You got there!','Never give up! Yay!','Well done for trying again!','Yes! You worked it out!']),
-  streak3:()=>pick(['Three in a row!','Hat trick! Woohoo!','Three in a row'+nm()+'! So cool!']),
-  streak5:()=>pick(['Five in a row! You are on fire!','Five in a row! Unstoppable!','Wow! Five in a row'+nm()+'!']),
-  levelup:()=>pick(['Level up! Yaaay!','Woohoo! You levelled up!','Level up'+nm()+'! You are getting so smart!']),
-  goal:()=>pick(['Yaaay! Daily goal complete!','You did it! Daily goal smashed!','Hooray! Daily goal done'+nm()+'!']),
-  round:()=>pick(['Round complete! Great job!','Yay! You finished the round!']),
-  test:()=>pick(['Wow! What a score!','Amazing test'+nm()+'! Hooray!']),
-  best:()=>pick(['New best score! Woohoo!','A new record! Yaaay!']),
-  buy:()=>pick(['Ooh! Looking good!','So fancy! Yay!','I love it!']),
-};
 function cheer(kind,data){
   if(!soundOn())return;
-  let line=LINES[kind]?LINES[kind]():'';
-  if(kind==='badge'&&data)line=pick(['Woohoo! You unlocked ','Yaaay! New badge! ','Hooray! You earned ']).concat(data.name,'!');
-  if(kind==='tier'&&data)line=`Amazing${nm()}! You reached ${data.name} tier!`;
   // Small moments get a quick clap now and then; achievements get the whole class.
   const big=['badge','tier','goal','levelup','test','round','best','streak5'].includes(kind);
   if(big)applause(kind==='tier'||kind==='test'?3:2.4,'big');
@@ -72,6 +54,10 @@ function cheer(kind,data){
   else if(kind==='after')claps(3,.2,.45);
   else if(kind==='buy')claps(3,.18,.5);
   else if(kind==='correct'&&Math.random()<.35)claps(3,.18,.4);
+  let list=clipsFor(kind);
+  if(kind==='badge'&&data)list=clipsFor('badge_'+data.id);
+  if(kind==='tier'&&data)list=clipsFor('tier_'+data.id);
   // Speak on every achievement, and on about half of the ordinary correct answers so it never gets tiring.
-  if(line&&(kind!=='correct'||Math.random()<.5))setTimeout(()=>say(line,kind==='tier'||kind==='badge'?{pitch:1.9,rate:1.02}:{}),big?350:150);
+  if(list.length&&(kind!=='correct'||Math.random()<.5)){const c=pick(list);setTimeout(()=>playClip(c),big?350:150);}
 }
+const playSample=()=>playClip(clipsFor('sample')[0]);
